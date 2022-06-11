@@ -1,4 +1,8 @@
-module Text.HLex.Internal.Char where
+module Text.HLex.Internal.Char
+  ( encodeUtf8,
+    rangeCharToUtf8,
+  )
+where
 
 import Control.Monad (when)
 import Data.Primitive qualified as Primitive
@@ -9,17 +13,6 @@ import Data.Word (Word8)
 import GHC.Exts (toList)
 import Text.HLex.Internal.Range (Range, pattern RangeV)
 import Text.HLex.Internal.Range qualified as Range
-import Text.HLex.Internal.RangeSet (RangeSet)
-
-type CharSet = RangeSet Char
-
--- -- invariant: start and end have same length
--- toByteRanges :: RangeSet Char -> RangeSet [Word8]
--- toByteRanges =
---   fromList
---     . concat
---     . fmap rangeCharToUtf8
---     . RangeSet.ranges
 
 -- list is or, inner list of bytes is and
 rangeCharToUtf8 :: Range Char -> [Range [Word8]]

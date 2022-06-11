@@ -1,4 +1,7 @@
-module Text.HLex.Internal.RegexToNfa where
+module Text.HLex.Internal.RegexToNfa
+  ( lexerToNfa,
+  )
+where
 
 import Control.Monad (forM_)
 import Control.Monad.State.Strict (MonadState)
@@ -20,8 +23,6 @@ data NfaBuilder a = NfaBuilder
     next :: !Int
   }
 
-type CodeNfaBuilder a = NfaBuilder (Code Q a)
-
 lexerToNfa :: Lexer a -> Nfa (Code Q a)
 lexerToNfa lexer =
   Nfa
@@ -39,10 +40,10 @@ lexerToNfa' Lexer {Lexer.rules} = do
     addEmptyTransition start s1
   pure start
 
-ruleToNfa :: MonadState (CodeNfaBuilder a) m => Lexer.Rule a -> m (Int, Int)
-ruleToNfa Lexer.Rule {Lexer.regex, Lexer.code} = do
+ruleToNfa :: MonadState (NfaBuilder (Code Q a)) m => Lexer.Rule a -> m (Int, Int)
+ruleToNfa Lexer.Rule {Lexer.regex, Lexer.accept} = do
   s1 <- freshState
-  s2 <- freshStateWith Nfa.defState {Nfa.accept = Just code}
+  s2 <- freshStateWith Nfa.defState {Nfa.accept = Just accept}
   regexToNfa s1 s2 regex
   pure (s1, s2)
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE RoleAnnotations #-}
+
 module Text.HLex.Internal.Range
   ( Range,
     new,
@@ -9,19 +11,27 @@ module Text.HLex.Internal.Range
     fromTuple,
     toTuple,
     zip,
+    elems,
   )
 where
 
+import Data.Hashable (Hashable)
 import Data.Word (Word8)
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Prelude hiding (zip)
 import Prelude qualified
 
+-- a range that is inclusive at the start and end
 data Range a = Range
   { start :: !a,
     end :: !a
   }
-  deriving (Show, Eq, Ord, Functor)
+  deriving (Show, Eq, Ord, Functor, Generic)
+
+type role Range nominal
+
+instance Hashable a => Hashable (Range a)
 
 pattern RangeV :: a -> a -> Range a
 pattern RangeV start end <- Range {start, end}
@@ -70,3 +80,7 @@ toTuple (RangeV start end) = (start, end)
 
 zip :: Range [Word8] -> [Range Word8]
 zip (RangeV start end) = fromTuple <$> Prelude.zip start end
+
+elems :: Enum a => Range a -> [a]
+elems (RangeV start end) = [start .. end]
+{-# INLINE elems #-}

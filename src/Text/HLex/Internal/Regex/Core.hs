@@ -34,8 +34,26 @@ zeroOrMore = Rep
 oneOrMore :: Regex -> Regex
 oneOrMore r = Concat r $ Rep r
 
+exactly :: Int -> Regex -> Regex
+exactly n r
+  | n < 0 = error "n cannot be negative"
+  | otherwise = go n
+  where
+    go 0 = r
+    go n = Concat r $ go $ n - 1
+
+atLeast :: Int -> Regex -> Regex
+atLeast n r = Concat (exactly n r) (Rep r)
+
+-- bounded :: Int -> Int -> Regex -> Regex
+-- bounded i j
+--   | i < 0 = error "i cannot be negative"
+--   | j < 0 = error "j cannot be negative"
+--   | i > j = error "i must be less than j"
+--   | otherwise = [i .. j]
+
 -- replicate :: Regex -> Regex
--- replicate = 
+-- replicate =
 
 -- -- data Repetition = Repetition
 -- --   { kind :: !RepetitionKind,
