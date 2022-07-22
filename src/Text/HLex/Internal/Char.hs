@@ -22,7 +22,7 @@ fix :: [Word8] -> [Word8] -> [Range [Word8]]
 fix x y
   | lenX == 0 || lenY == 0 = error "fix: incorrect input given"
   | lenX == lenY = [Range.new x y]
-  | lenX == 1 = Range.new x [0x7F] : fix [0xC2, 0x80] y
+  | lenX == 1 = Range.new x [0x7F] : fix [0xC2, 0x80] y -- should this be 0xC0?
   | lenX == 2 = Range.new x [0xDF, 0xBF] : fix [0xE0, 0x80, 0x80] y
   | lenX == 3 = Range.new x [0xEF, 0xBF, 0xBF] : fix [0xF0, 0x80, 0x80, 0x80] y
   | otherwise = error "fix: incorrect input given"
@@ -31,7 +31,7 @@ fix x y
     lenY = length y
 
 encodeUtf8 :: Char -> [Word8]
-encodeUtf8 c = case T.cons c T.empty of
+encodeUtf8 c = case T.singleton c of
   T.Internal.Text (T.Array.ByteArray bs) off len -> do
     when (off /= 0) $ error "offset should be zero"
     let barr = Primitive.ByteArray bs

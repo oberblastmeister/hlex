@@ -18,7 +18,7 @@ import Data.Bifunctor (Bifunctor (bimap))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
-import Data.Vector.Persistent.Strict qualified as PVec
+import Data.Vector.Persistent qualified as PVec
 import GHC.Exts (fromList, toList)
 import Text.HLex.Internal.Accept (Accept)
 import Text.HLex.Internal.AssocList (AssocList)

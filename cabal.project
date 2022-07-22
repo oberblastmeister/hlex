@@ -3,6 +3,3 @@ packages:
 
 tests: True
 benchmarks: True
-packages:
-    ./
-    ../pvector/

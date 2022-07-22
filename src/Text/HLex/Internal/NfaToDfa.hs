@@ -81,11 +81,15 @@ nfaToNDfa' nfa ndfa (ns : nss)
                 acc <- nfa & Nfa.states & (VB.! s) & Nfa.accept & Foldable.toList
             ]
     trans =
-      [ t
+      [
+        -- closure should be done after everything is merged instead of before
+        fmap (`Nfa.closure` nfa) t
         | s <- toList ns,
           t <-
+            -- I think this is wrong, transitions need to be merged before
             nfa & Nfa.states & (VB.! s) & Nfa.transitions
               & fmap (\(range, state) -> ((fromIntegral @Word8 @Int) <$> range, HashSet.singleton state))
+              -- rangeset fromList should also be wrong
               & fromList @(RangeMap _ _)
               & RangeMap.elems
       ]
