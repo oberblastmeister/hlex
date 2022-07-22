@@ -73,7 +73,16 @@ union r1@Range {start = start1, end = end1} r2@Range {start = start2, end = end2
     end = max end1 end2
 
 -- merge :: DiscreteOrdered a => Range a -> Range a -> (Range a, Maybe (Range a), Range a)
--- merge r1 r2 = 
+-- merge r1 r2 =
+
+intersection :: DiscreteOrdered a => Range a -> Range a -> Maybe (Range a)
+intersection (Range s1 e1) (Range s2 e2) =
+  if s3 <= e3
+    then Just $ Range s3 e3
+    else Nothing
+  where
+    s3 = max s1 s2
+    e3 = min e1 e2
 
 fromTuple :: (a, a) -> Range a
 fromTuple (start, end) = Range {start, end}
