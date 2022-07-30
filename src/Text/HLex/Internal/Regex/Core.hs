@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Text.HLex.Internal.Regex.Core where
 
 import Data.Function ((&))
@@ -10,20 +12,20 @@ import Text.HLex.Internal.Range qualified as Range
 
 data Regex
   = Empty
-  | Range !(Range Word8)
+  | Range !Char !Char
   | Rep Regex
   | Concat Regex Regex
   | Alt Regex Regex
   deriving (Show, Eq)
 
-charRanges :: [Range Char] -> Regex
-charRanges rs = foldRE Concat $ charRange <$> rs
+-- charRanges :: [Range Char] -> Regex
+-- charRanges rs = foldRE Concat $ charRange <$> rs
 
-charRange :: Range Char -> Regex
-charRange range =
-  Char.rangeCharToUtf8 range
-    & fmap (foldRE Concat . fmap Range . Range.zip)
-    & foldRE Alt
+-- charRange :: Range Char -> Regex
+-- charRange range =
+--   Char.rangeCharToUtf8 range
+--     & fmap (foldRE Concat . fmap Range . Range.zip)
+--     & foldRE Alt
 
 zeroOrOne :: Regex -> Regex
 zeroOrOne = Alt Empty
@@ -74,11 +76,11 @@ atLeast n r = Concat (exactly n r) (Rep r)
 --   | Bounded !Int !Int
 --   deriving (Show, Eq)
 
-text :: Text -> Regex
-text =
-  foldRE Concat
-    . fmap (charRange . Range.point)
-    . T.unpack
+-- text :: Text -> Regex
+-- text =
+--   foldRE Concat
+--     . fmap (charRange . Range.point)
+--     . T.unpack
 
 foldRE :: Foldable t => (Regex -> Regex -> Regex) -> t Regex -> Regex
 foldRE f = foldr f Empty

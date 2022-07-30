@@ -25,8 +25,8 @@ data Rule a = Rule
     accept :: Accept (Code Q a)
   }
 
-(~=) :: Dsl.Regex () -> Code Q a -> LexerBuilder a ()
-re ~= code = tell $ Dual [RuleBuild {regex = Dsl.runRegex re, ruleCode = code}]
+-- (~=) :: Dsl.Regex () -> Code Q a -> LexerBuilder a ()
+-- re ~= code = tell $ Dual [RuleBuild {regex = Dsl.runRegex re, ruleCode = code}]
 
 evalLexerBuilder :: LexerBuilder a () -> Lexer a
 evalLexerBuilder =

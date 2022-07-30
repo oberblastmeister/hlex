@@ -12,7 +12,6 @@ import Data.Function ((&))
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HashSet
 import Data.Vector qualified as VB
-import Data.Word (Word8)
 import GHC.Exts (toList)
 import Text.HLex.Internal.Accept (Accept)
 import Text.HLex.Internal.Range (Range)
@@ -23,7 +22,7 @@ data Nfa a = Nfa
   }
 
 data State a = State
-  { transitions :: [(Range Word8, Int)],
+  { transitions :: [(Range, Int)],
     emptyTransitions :: !(HashSet Int),
     accept :: Maybe (Accept a)
   }

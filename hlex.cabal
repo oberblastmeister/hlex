@@ -104,15 +104,17 @@ test-suite hlex-test
   import: common-options, rtsopts
   type: exitcode-stdio-1.0
   hs-source-dirs: test
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
+    RangeMapTest
   build-depends:
     hlex,
-    hspec ^>= 2.9.4,
+    tasty ^>= 1.4.2.3,
+    tasty-quickcheck ^>= 0.10.2,
     QuickCheck ^>= 2.14.2,
     quickcheck-instances ^>= 0.3.27,
   build-tool-depends:
-    hspec-discover:hspec-discover,
+    tasty-discover:tasty-discover
 
 benchmark hlex-bench
   import: common-options, rtsopts
@@ -121,4 +123,4 @@ benchmark hlex-bench
   main-is: Main.hs
   build-depends:
     hlex,
-    criterion ^>= 1.5.13.0,
+    tasty-bench ^>= 0.3.1,

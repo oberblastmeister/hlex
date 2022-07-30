@@ -1,39 +1,40 @@
 {-# LANGUAGE RoleAnnotations #-}
 
 module Text.HLex.Internal.Range
-  ( Range,
+  ( Range (start, end),
     new,
-    point,
-    DiscreteOrdered (..),
-    isContiguous,
-    union,
+    elems,
+    -- point,
+    -- DiscreteOrdered (..),
+    -- isContiguous,
+    -- union,
     pattern RangeV,
     fromTuple,
     toTuple,
-    zip,
-    elems,
+    -- -- zip,
+    -- elems,
+    unsafeNew,
+    unsafeMapBoth,
+    point,
+    invariant,
   )
 where
 
 import Data.Hashable (Hashable)
-import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import Prelude hiding (zip)
-import Prelude qualified
+import Prelude hiding (null, zip)
 
--- a range that is inclusive at the start and end
-data Range a = Range
-  { start :: !a,
-    end :: !a
+-- a range that is inclusive at the start and inclusive at end
+data Range = Range
+  { start :: !Int,
+    end :: !Int
   }
-  deriving (Show, Eq, Ord, Functor, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
-type role Range nominal
+instance Hashable Range
 
-instance Hashable a => Hashable (Range a)
-
-pattern RangeV :: a -> a -> Range a
+pattern RangeV :: Int -> Int -> Range
 pattern RangeV start end <- Range {start, end}
 
 {-# COMPLETE RangeV #-}
@@ -47,12 +48,18 @@ instance DiscreteOrdered Int where
 instance Ord a => DiscreteOrdered [a] where
   adjacent _ _ = False
 
-new :: (Ord a, HasCallStack) => a -> a -> Range a
+new :: HasCallStack => Int -> Int -> Range
 new start end
   | start > end = error "start is greater than end"
   | otherwise = Range {start, end}
 
-point :: a -> Range a
+unsafeNew :: Int -> Int -> Range
+unsafeNew start end = Range {start, end}
+
+unsafeMapBoth :: (Int -> Int) -> Range -> Range
+unsafeMapBoth f Range {start, end} = Range {start = f start, end = f end}
+
+point :: Int -> Range
 point x = Range {start = x, end = x}
 
 -- | Check adjacency, allowing for case where x = maxBound.  Use as the
@@ -60,11 +67,11 @@ point x = Range {start = x, end = x}
 boundedAdjacent :: (Ord a, Enum a) => a -> a -> Bool
 boundedAdjacent x y = if x < y then succ x == y else False
 
-isContiguous :: DiscreteOrdered a => Range a -> Range a -> Bool
+isContiguous :: Range -> Range -> Bool
 isContiguous Range {start = start1, end = end1} Range {start = start2, end = end2} =
   (max start1 start2) <= ((min end1 end2)) || adjacent end1 start2
 
-union :: DiscreteOrdered a => Range a -> Range a -> Maybe (Range a)
+union :: Range -> Range -> Maybe Range
 union r1@Range {start = start1, end = end1} r2@Range {start = start2, end = end2}
   | isContiguous r1 r2 = Just Range {start, end}
   | otherwise = Nothing
@@ -72,10 +79,7 @@ union r1@Range {start = start1, end = end1} r2@Range {start = start2, end = end2
     start = min start1 start2
     end = max end1 end2
 
--- merge :: DiscreteOrdered a => Range a -> Range a -> (Range a, Maybe (Range a), Range a)
--- merge r1 r2 =
-
-intersection :: DiscreteOrdered a => Range a -> Range a -> Maybe (Range a)
+intersection :: Range -> Range -> Maybe Range
 intersection (Range s1 e1) (Range s2 e2) =
   if s3 <= e3
     then Just $ Range s3 e3
@@ -84,15 +88,18 @@ intersection (Range s1 e1) (Range s2 e2) =
     s3 = max s1 s2
     e3 = min e1 e2
 
-fromTuple :: (a, a) -> Range a
+fromTuple :: (Int, Int) -> Range
 fromTuple (start, end) = Range {start, end}
 
-toTuple :: Range a -> (a, a)
+toTuple :: Range -> (Int, Int)
 toTuple (RangeV start end) = (start, end)
 
-zip :: Range [Word8] -> [Range Word8]
-zip (RangeV start end) = fromTuple <$> Prelude.zip start end
+-- -- zip :: Range [Word8] -> [Range Word8]
+-- -- zip (RangeV start end) = fromTuple <$> Prelude.zip start end
 
-elems :: Enum a => Range a -> [a]
+elems :: Range -> [Int]
 elems (RangeV start end) = [start .. end]
 {-# INLINE elems #-}
+
+invariant :: Range -> Bool
+invariant Range {start, end} = start <= end

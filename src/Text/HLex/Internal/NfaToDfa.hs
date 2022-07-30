@@ -4,7 +4,7 @@ module Text.HLex.Internal.NfaToDfa
   )
 where
 
-import Data.Bifunctor (first)
+import Data.Bifunctor (first, second)
 import Data.Either qualified as Either
 import Data.Foldable (foldMap', foldl')
 import Data.Foldable qualified as Foldable
@@ -19,7 +19,6 @@ import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromJust)
 import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
-import Data.Word (Word8)
 import GHC.Exts (fromList, toList)
 import Text.HLex.Internal.Accept qualified as Accept
 import Text.HLex.Internal.AssocList qualified as AssocList
@@ -68,8 +67,8 @@ nfaToNDfa' nfa ndfa (ns : nss)
   | ns `Dfa.inNDfa` ndfa = nfaToNDfa' nfa ndfa nss
   | otherwise = nfaToNDfa' nfa ndfa' nss'
   where
-    ndfa' = Dfa.addNDfa ns (Dfa.State {transitions = fromList trans, accept}) ndfa
-    nss' = fmap snd trans ++ nss
+    ndfa' = Dfa.addNDfa ns (Dfa.State {transitions = fromList byteTrans, accept}) ndfa
+    nss' = fmap snd byteTrans ++ nss
     -- choose the accept with the highest priority from the set of nfa states
     accept =
       fmap NE.head $
@@ -80,19 +79,11 @@ nfaToNDfa' nfa ndfa (ns : nss)
               | s <- toList ns,
                 acc <- nfa & Nfa.states & (VB.! s) & Nfa.accept & Foldable.toList
             ]
-    trans =
-      [
-        -- closure should be done after everything is merged instead of before
-        fmap (`Nfa.closure` nfa) t
-        | s <- toList ns,
-          t <-
-            -- I think this is wrong, transitions need to be merged before
-            nfa & Nfa.states & (VB.! s) & Nfa.transitions
-              & fmap (\(range, state) -> ((fromIntegral @Word8 @Int) <$> range, HashSet.singleton state))
-              -- rangeset fromList should also be wrong
-              & fromList @(RangeMap _ _)
-              & RangeMap.elems
-      ]
+    byteTrans =
+      fmap (second (`Nfa.closure` nfa)) $
+        RangeMap.elems $
+          fromList @(RangeMap _) $ fmap (second HashSet.singleton) rangeTrans
+    rangeTrans = [t | s <- toList ns, t <- nfa & Nfa.states & (VB.! s) & Nfa.transitions]
 
 -- % Hopcroft's Algorithm for DFA minimization (cut/pasted from Wikipedia):
 -- % X refines Y into Y1 and Y2 means

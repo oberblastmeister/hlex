@@ -1,9 +1,9 @@
 module Text.HLex.Internal.Regex.Dsl
   ( Regex,
-    runRegex,
+    -- runRegex,
     empty,
     lit,
-    range,
+    -- range,
     opt,
     some,
     many,
@@ -37,7 +37,7 @@ data Free f a = Pure a | Free (f (Free f a))
 data RegexF a
   = Empty a
   | Lit !Text a
-  | Range !(Range Char) a
+  | Range !Char !Char a
   | Some (Regex ()) a
   | Many (Regex ()) a
   | Opt (Regex ()) a
@@ -54,33 +54,33 @@ infixr 0 ~>
 liftF :: Functor f => f ~> Free f
 liftF f = Free $ Pure <$> f
 
-runRegex :: Regex () -> Core.Regex
-runRegex = runRegexConcat
+-- runRegex :: Regex () -> Core.Regex
+-- runRegex = runRegexConcat
 
-runRegexConcat :: Regex () -> Core.Regex
-runRegexConcat = runRegexWith Core.Concat
+-- runRegexConcat :: Regex () -> Core.Regex
+-- runRegexConcat = runRegexWith Core.Concat
 
-runRegexAlt :: Regex () -> Core.Regex
-runRegexAlt = runRegexWith Core.Alt
+-- runRegexAlt :: Regex () -> Core.Regex
+-- runRegexAlt = runRegexWith Core.Alt
 
-runRegexWith :: (Core.Regex -> Core.Regex -> Core.Regex) -> Regex () -> Core.Regex
-runRegexWith f = foldr f Core.Empty . reverse . runRegex'
+-- runRegexWith :: (Core.Regex -> Core.Regex -> Core.Regex) -> Regex () -> Core.Regex
+-- runRegexWith f = foldr f Core.Empty . reverse . runRegex'
 
-runRegex' :: Regex () -> [Core.Regex]
-runRegex' = go []
-  where
-    go rs (Pure ()) = rs
-    go rs (Free f) = case f of
-      Empty k -> go rs k
-      Lit s k -> next (Core.text s) k
-      Range r k -> next (Core.charRange r) k
-      Some m k -> let !re' = runRegexConcat m in next re' k
-      Many m k -> let !re' = runRegexConcat m in next re' k
-      Opt m k -> let !re' = runRegexConcat m in next (Core.zeroOrOne re') k
-      AllOf m k -> let !re' = runRegexConcat m in next re' k
-      AnyOf m k -> let !re' = runRegexAlt m in next re' k
-      where
-        next !x = go (x : rs)
+-- runRegex' :: Regex () -> [Core.Regex]
+-- runRegex' = go []
+--   where
+--     go rs (Pure ()) = rs
+--     go rs (Free f) = case f of
+--       Empty k -> go rs k
+--       Lit s k -> next (Core.text s) k
+--       Range r k -> next (Core.charRange r) k
+--       Some m k -> let !re' = runRegexConcat m in next re' k
+--       Many m k -> let !re' = runRegexConcat m in next re' k
+--       Opt m k -> let !re' = runRegexConcat m in next (Core.zeroOrOne re') k
+--       AllOf m k -> let !re' = runRegexConcat m in next re' k
+--       AnyOf m k -> let !re' = runRegexAlt m in next re' k
+--       where
+--         next !x = go (x : rs)
 
 empty :: Regex ()
 empty = liftF $ Empty ()
@@ -88,8 +88,8 @@ empty = liftF $ Empty ()
 lit :: Text -> Regex ()
 lit s = liftF $ Lit s ()
 
-range :: Char -> Char -> Regex ()
-range c1 c2 = liftF $ Range (Range.new c1 c2) ()
+-- range :: Char -> Char -> Regex ()
+-- range c1 c2 = liftF $ Range (Range.new c1 c2) ()
 
 opt :: Regex () -> Regex ()
 opt r = liftF $ Opt r ()

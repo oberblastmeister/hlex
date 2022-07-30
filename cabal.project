@@ -1,5 +1,6 @@
 packages:
     ./
 
-tests: True
-benchmarks: True
+constraints: hlex +tests
+
+test-show-details: direct
