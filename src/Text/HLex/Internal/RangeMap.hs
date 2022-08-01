@@ -17,7 +17,7 @@ import Data.Foldable (foldl')
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import GHC.Exts (IsList (..))
-import Text.HLex.Internal.Range (Range)
+import Text.HLex.Internal.Range (Range, pattern RangeV)
 import Text.HLex.Internal.Range qualified as Range
 
 newtype RangeMap a = RangeMap {rangeMap :: IntMap (Pair a)}
@@ -40,13 +40,14 @@ insertWith combine r m (RangeMap f) = case equal of
           IntMap.insert (Range.start r) (p :!: combine m m') f
       LT ->
         -- The range r is strictly shorter.
-        RangeMap $
-          IntMap.insert (Range.end r + 1) (p :!: m') $
-            IntMap.insert (Range.start r) (Range.end r :!: combine m m') f
+        RangeMap
+          . IntMap.insert (Range.end r + 1) (p :!: m')
+          $ IntMap.insert (Range.start r) (Range.end r :!: combine m m') f
       GT ->
         -- The range r is strictly longer. Continue recursively.
-        insertWith combine (Range.unsafeNew (p + 1) (Range.end r)) m $
-          RangeMap $ IntMap.insert (Range.start r) (p :!: combine m m') f
+        insertWith combine (Range.unsafeNew (p + 1) (Range.end r)) m
+          . RangeMap
+          $ IntMap.insert (Range.start r) (p :!: combine m m') f
   Nothing ->
     -- Find the part of r that does not overlap with anything in
     -- smaller or larger, if any.
@@ -56,16 +57,17 @@ insertWith combine r m (RangeMap f) = case equal of
         RangeMap $ IntMap.insert (Range.start r) (Range.end r :!: m) f
       (Nothing, Just p) ->
         -- Overlap on the right. Continue recursively.
-        insertWith combine (Range.unsafeNew p (Range.end r)) m $
+        insertWith combine (Range.unsafeNew p (Range.end r)) m
           -- we can subtract 1 because p is always greater than (Range.start r)
-          RangeMap $ IntMap.insert (Range.start r) ((p - 1) :!: m) f
+          . RangeMap
+          $ IntMap.insert (Range.start r) ((p - 1) :!: m) f
       (Just (p1, (p2 :!: m')), overlapRight) -> case overlapRight of
         -- this needs some work
         Just p3 ->
           -- Overlap on both sides. Continue recursively.
-          insertWith combine (Range.unsafeNew p3 (Range.end r)) m $
-            RangeMap $
-              ( if p2 + 1 > p3 - 1
+          insertWith combine (Range.unsafeNew p3 (Range.end r)) m
+            . RangeMap
+            . ( if p2 + 1 > p3 - 1
                   then -- The left range ends exactly where the right range
                   -- starts.
                     id
@@ -73,30 +75,34 @@ insertWith combine r m (RangeMap f) = case equal of
                   -- ranges.
                     IntMap.insert (p2 + 1) ((p3 - 1) :!: m)
               )
-                $ IntMap.insert (Range.start r) (p2 :!: (combine m m')) $ afterNonOverlappedLeft
+            . IntMap.insert (Range.start r) (p2 :!: (combine m m'))
+            $ afterNonOverlappedLeft
         Nothing ->
           case compare p2 (Range.end r) of
             LT ->
               -- Overlap on the left, the left range ends before r ends.
-              RangeMap $
+              RangeMap
                 -- we can add 1 here because the p2 is always less than (Range.end r)
-                IntMap.insert (p2 + 1) (Range.end r :!: m) $
-                  -- inserting the overlapping part, ending where the left range ends
-                  IntMap.insert (Range.start r) (p2 :!: (combine m m')) $ afterNonOverlappedLeft
+                . IntMap.insert (p2 + 1) (Range.end r :!: m)
+                -- inserting the overlapping part, ending where the left range ends
+                . IntMap.insert (Range.start r) (p2 :!: (combine m m'))
+                $ afterNonOverlappedLeft
             EQ ->
               -- Overlap on the left, the left range ends where r
               -- ends.
-              RangeMap $
+              RangeMap
                 -- insert the overlapping part, ending where the range ends
-                IntMap.insert (Range.start r) (Range.end r :!: (combine m m')) $ afterNonOverlappedLeft
+                . IntMap.insert (Range.start r) (Range.end r :!: (combine m m'))
+                $ afterNonOverlappedLeft
             GT ->
               -- Overlap on the left, the left range ends after r.
-              RangeMap $
+              RangeMap
                 -- insert the non overlapping part after the range ends
                 -- we can add 1 here because p2 is always greater than r
-                IntMap.insert (Range.end r + 1) (p2 :!: m') $
-                  -- insert the overlapping part, ending where the range ends
-                  IntMap.insert (Range.start r) (Range.end r :!: combine m m') $ afterNonOverlappedLeft
+                . IntMap.insert (Range.end r + 1) (p2 :!: m')
+                -- insert the overlapping part, ending where the range ends
+                . IntMap.insert (Range.start r) (Range.end r :!: combine m m')
+                $ afterNonOverlappedLeft
         where
           afterNonOverlappedLeft =
             ( if p1 == Range.start r
@@ -119,6 +125,12 @@ insertWith combine r m (RangeMap f) = case equal of
         | Range.start r <= end -> Just s
         | otherwise -> Nothing
 
+singleton :: Range -> a -> RangeMap a
+singleton (RangeV s e) m = RangeMap $ IntMap.singleton s $ e :!: m
+
+several :: Semigroup a => [Range] -> a -> RangeMap a
+several rs m = foldl' (\f r -> insert r m f) empty rs
+
 -- | Invariant for 'RangeMap'.
 --
 --  The ranges must not overlap.
@@ -128,7 +140,7 @@ invariant f =
     [ all Range.invariant rs,
       case rs of
         [] -> True
-        r : rs -> and $ zipWith (<=) (map Range.end $ init1 r rs) (map Range.start rs)
+        r : rs -> and $ zipWith (<) (map Range.end $ init1 r rs) (map Range.start rs)
     ]
   where
     rs = map fst $ toList f
@@ -147,16 +159,19 @@ empty = RangeMap mempty
 instance Semigroup m => IsList (RangeMap m) where
   type Item (RangeMap m) = (Range, m)
   fromList = foldl' (flip $ uncurry insert) empty
-  toList =
-    fmap (\(start, (end :!: m)) -> (Range.unsafeNew start end, m))
-      . toList
-      . rangeMap
+  toList = Text.HLex.Internal.RangeMap.toList'
+
+toList' :: RangeMap a -> [(Range, a)]
+toList' =
+  fmap (\(start, (end :!: m)) -> (Range.unsafeNew start end, m))
+    . toList
+    . rangeMap
 
 elems :: RangeMap a -> [(Int, a)]
-elems (RangeMap {rangeMap}) =
+elems f =
   [ (i, m)
-    | (start, end :!: m) <- toList rangeMap,
-      i <- Range.elems $ Range.unsafeNew start end
+    | (r, m) <- toList' f,
+      i <- Range.elems r
   ]
 {-# INLINE elems #-}
 
@@ -194,3 +209,12 @@ elems (RangeMap {rangeMap}) =
 -- elems :: Enum a => RangeMap a -> [(a, m)]
 -- elems (RangeMap rs) = [(x, m) | (r, m) <- rs, x <- Range.elems r]
 -- {-# INLINE elems #-}
+
+coveringRange :: RangeMap a -> Maybe Range
+coveringRange f = do
+  min <- fst <$> IntMap.lookupMin (rangeMap f)
+  max <- (\(_, (p :!: _)) -> p) <$> IntMap.lookupMax (rangeMap f)
+  pure $ Range.unsafeNew min max
+
+toMap :: RangeMap a -> IntMap a
+toMap = IntMap.fromList . elems

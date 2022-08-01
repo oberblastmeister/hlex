@@ -71,18 +71,19 @@ nfaToNDfa' nfa ndfa (ns : nss)
     nss' = fmap snd byteTrans ++ nss
     -- choose the accept with the highest priority from the set of nfa states
     accept =
-      fmap NE.head $
-        NE.nonEmpty $
-          List.sortOn
-            Accept.priority
-            [ acc
-              | s <- toList ns,
-                acc <- nfa & Nfa.states & (VB.! s) & Nfa.accept & Foldable.toList
-            ]
+      fmap NE.head
+        . NE.nonEmpty
+        $ List.sortOn
+          Accept.priority
+          [ acc
+            | s <- toList ns,
+              acc <- nfa & Nfa.states & (VB.! s) & Nfa.accept & Foldable.toList
+          ]
     byteTrans =
-      fmap (second (`Nfa.closure` nfa)) $
-        RangeMap.elems $
-          fromList @(RangeMap _) $ fmap (second HashSet.singleton) rangeTrans
+      fmap (second (`Nfa.closure` nfa))
+        . RangeMap.elems
+        . fromList @(RangeMap _)
+        $ fmap (second HashSet.singleton) rangeTrans
     rangeTrans = [t | s <- toList ns, t <- nfa & Nfa.states & (VB.! s) & Nfa.transitions]
 
 -- % Hopcroft's Algorithm for DFA minimization (cut/pasted from Wikipedia):

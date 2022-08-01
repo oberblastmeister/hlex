@@ -1,24 +1,25 @@
 {-# LANGUAGE RoleAnnotations #-}
 
-module Text.HLex.Internal.Range
-  ( Range (start, end),
-    new,
-    elems,
-    -- point,
-    -- DiscreteOrdered (..),
-    -- isContiguous,
-    -- union,
-    pattern RangeV,
-    fromTuple,
-    toTuple,
-    -- -- zip,
-    -- elems,
-    unsafeNew,
-    unsafeMapBoth,
-    point,
-    invariant,
-  )
-where
+module Text.HLex.Internal.Range where
+
+-- ( Range (start, end),
+--   new,
+--   elems,
+--   -- point,
+--   -- DiscreteOrdered (..),
+--   -- isContiguous,
+--   -- union,
+--   pattern RangeV,
+--   fromTuple,
+--   toTuple,
+--   -- -- zip,
+--   -- elems,
+--   unsafeNew,
+--   unsafeMapBoth,
+--   point,
+--   invariant,
+--   overlaps,
+-- )
 
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
@@ -103,3 +104,6 @@ elems (RangeV start end) = [start .. end]
 
 invariant :: Range -> Bool
 invariant Range {start, end} = start <= end
+
+overlaps :: Range -> Range -> Bool
+overlaps (Range s1 e1) (Range s2 e2) = max s1 s2 >= min e1 e2
