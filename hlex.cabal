@@ -66,6 +66,7 @@ common common-options
     mtl ^>= 2.2.2,
     primitive ^>= 0.7.0.0,
     vector ^>= 0.12.3.1,
+    megaparsec ^>= 9.2.1,
 
 library
   import: common-options
@@ -75,6 +76,9 @@ library
       Text.HLex.Internal.Char
       Text.HLex.Internal.Dfa
       Text.HLex.Internal.Nfa
+      Text.HLex.Internal.RegexToNfa
+      Text.HLex.Internal.NfaToDfa
+      Text.HLex.Internal.Minimize
       Text.HLex.Internal.Range
       Text.HLex.Internal.RangeMap
       Text.HLex.Internal.Lexer
@@ -108,10 +112,12 @@ test-suite hlex-test
   other-modules:
     RangeTest
     RangeMapTest
+    MinimizeTest
   build-depends:
     hlex,
     tasty ^>= 1.4.2.3,
     tasty-quickcheck ^>= 0.10.2,
+    tasty-hunit ^>= 0.10.0.3,
     QuickCheck ^>= 2.14.2,
     quickcheck-instances ^>= 0.3.27,
   build-tool-depends:

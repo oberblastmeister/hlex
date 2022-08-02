@@ -9,7 +9,6 @@ import Control.Monad.State.Strict qualified as State
 import Data.HashSet qualified as HashSet
 import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
-import Data.Word (Word8)
 import Language.Haskell.TH (Code, Q)
 import Text.HLex.Internal.Lexer (Lexer (Lexer))
 import Text.HLex.Internal.Lexer qualified as Lexer
@@ -57,14 +56,15 @@ regexToNfa a b = \case
   Core.Alt r1 r2 -> do
     regexToNfa a b r1
     regexToNfa a b r2
-  Core.Range start end -> 
+  Core.Range start end ->
     undefined
-    -- addByteRangeTransition a b range
+  -- addByteRangeTransition a b range
   Core.Rep r -> do
     s <- freshState
     addEmptyTransition a s
     regexToNfa s s r
     addEmptyTransition s b
+  _ -> undefined
 
 newNfaBuilder :: NfaBuilder a
 newNfaBuilder = NfaBuilder {nfa = mempty, next = 0}

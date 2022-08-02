@@ -12,6 +12,7 @@ import Text.HLex.Internal.Range qualified as Range
 
 data Regex
   = Empty
+  | Lit !Text
   | Range !Char !Char
   | Rep Regex
   | Concat Regex Regex
