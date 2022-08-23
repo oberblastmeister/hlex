@@ -24,6 +24,7 @@ import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
 import Data.Hashable (Hashable)
+import Data.IntMap.Strict (IntMap)
 import Data.Maybe (fromJust)
 import Data.Vector.Persistent qualified as PVec
 import GHC.Exts (fromList, toList)
@@ -55,7 +56,7 @@ instance Functor f => Bifunctor (Dfa' f) where
       }
 
 data State s a = State
-  { transitions :: !(HashMap Int s),
+  { transitions :: !(IntMap s),
     accept :: Maybe (Accept a)
   }
   deriving (Show)
@@ -71,7 +72,7 @@ instance Bifunctor State where
         accept = (fmap . fmap) g accept
       }
 
-newState :: HashMap Int s -> State s a
+newState :: IntMap s -> State s a
 newState transitions = State {transitions, accept = Nothing}
 
 emptyState :: State s a
@@ -91,8 +92,8 @@ addNDfa set s dfa@Dfa {states} = dfa {states = HashMap.insert set s states}
 
 forFromTransTo :: Dfa a -> (Int -> Int -> Int -> [b]) -> [b]
 forFromTransTo Dfa {states} f = do
-  (from, state) <- zip [0 :: Int ..] $ PVec.toList states
-  (trans, to) <- HashMap.toList $ transitions state
+  (from, state) <- zip [0 :: Int ..] $ toList states
+  (trans, to) <- toList $ transitions state
   f from trans to
 {-# INLINE forFromTransTo #-}
 
@@ -105,7 +106,7 @@ normalize Dfa {states, starts} = Dfa {states = states', starts = starts'}
     states' =
       PVec.fromList
         [ convertState s
-          | (ns, _) <- stateList,
+          | ns <- HashMap.keys states,
             let s = fromJust $ HashMap.lookup ns states
         ]
 
@@ -117,7 +118,5 @@ normalize Dfa {states, starts} = Dfa {states = states', starts = starts'}
     getState :: s -> Int
     getState = fromJust . flip HashMap.lookup stateMap
 
-    stateList = zip (HashMap.keys states) [0 :: Int ..]
-
     stateMap :: HashMap s Int
-    stateMap = fromList stateList
+    stateMap = fromList $ zip (HashMap.keys states) [0 :: Int ..]

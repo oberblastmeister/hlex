@@ -4,7 +4,6 @@ import Control.Monad.Writer
 import Language.Haskell.TH (Code, Q)
 import Text.HLex.Internal.Accept (Accept (..))
 import Text.HLex.Internal.Regex.Core qualified as Core
-import Text.HLex.Internal.Regex.Dsl qualified as Dsl
 
 newtype Lexer a = Lexer {rules :: [Rule a]}
 

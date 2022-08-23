@@ -1,6 +1,9 @@
 packages:
     ./
 
+if(os(linux))
+    constraints: hlex +lld
+
 constraints: hlex +tests
 
 test-show-details: direct

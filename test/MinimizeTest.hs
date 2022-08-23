@@ -1,6 +1,7 @@
 module MinimizeTest where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.IntMap.Strict qualified as IntMap
 import Data.Vector.Persistent qualified as PVec
 import GHC.Exts (fromList)
 import Test.QuickCheck
@@ -41,4 +42,4 @@ unit_smoke = do
   pure ()
 
 newState' :: Int -> s -> State s a
-newState' k = newState . HashMap.singleton k
+newState' k = newState . IntMap.singleton k

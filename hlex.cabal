@@ -16,6 +16,10 @@ version:            0.1.0.0
 author:             brian
 maintainer:         littlebubu.shu@gmail.com
 
+flag lld
+  manual: True
+  default: False
+
 -- A copyright notice.
 -- copyright:
 -- category:
@@ -55,6 +59,9 @@ common common-options
     -Werror=incomplete-record-updates
     -Wcpp-undef
     -Widentities
+  if flag(lld)
+    ghc-options: -optl-fuse-ld=lld
+    extra-libraries: m, pthread
   build-depends:
     base >= 4.12 && <5,
     text ^>= 2.0,
@@ -81,6 +88,7 @@ library
       Text.HLex.Internal.Minimize
       Text.HLex.Internal.Range
       Text.HLex.Internal.RangeMap
+      Text.HLex.Internal.CharSet
       Text.HLex.Internal.Lexer
       Text.HLex.Internal.Accept
       Text.HLex.Internal.Regex.Core
