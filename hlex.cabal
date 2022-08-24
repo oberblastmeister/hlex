@@ -1,4 +1,4 @@
-cabal-version:      3.6
+cabal-version:      3.8
 name:               hlex
 version:            0.1.0.0
 
@@ -23,7 +23,9 @@ flag lld
 -- A copyright notice.
 -- copyright:
 -- category:
-extra-source-files: CHANGELOG.md
+
+extra-source-files:
+  CHANGELOG.md
 
 common common-options
   default-language: GHC2021
@@ -46,6 +48,7 @@ common common-options
     NoGeneralizedNewtypeDeriving,
     DerivingVia,
     PartialTypeSignatures,
+    PackageImports
   ghc-options:
     -Wall
     -Wredundant-constraints
@@ -59,9 +62,6 @@ common common-options
     -Werror=incomplete-record-updates
     -Wcpp-undef
     -Widentities
-  if flag(lld)
-    ghc-options: -optl-fuse-ld=lld
-    extra-libraries: m, pthread
   build-depends:
     base >= 4.12 && <5,
     text ^>= 2.0,
@@ -77,25 +77,46 @@ common common-options
 
 library
   import: common-options
-  hs-source-dirs: src
+  hs-source-dirs: components/lib
   exposed-modules:
-    Text.HLex
-      Text.HLex.Internal.Char
-      Text.HLex.Internal.Dfa
-      Text.HLex.Internal.Nfa
-      Text.HLex.Internal.RegexToNfa
-      Text.HLex.Internal.NfaToDfa
-      Text.HLex.Internal.Minimize
-      Text.HLex.Internal.Range
-      Text.HLex.Internal.RangeMap
-      Text.HLex.Internal.CharSet
-      Text.HLex.Internal.Lexer
-      Text.HLex.Internal.Accept
-      Text.HLex.Internal.Regex.Core
-      Text.HLex.Internal.Regex.Dsl
-      Text.HLex.Internal.AssocList
-      Text.HLex.Internal.Runtime
-    
+    Lib
+  build-depends: hlex:core
+
+library core
+  import: common-options
+  visibility: public
+  hs-source-dirs: components/core
+  exposed-modules:
+    Lib
+  build-depends: hlex:internal
+
+library unicode
+  import: common-options
+  visibility: public
+  hs-source-dirs: components/unicode
+  exposed-modules:
+    Lib
+
+library internal
+  import: common-options
+  visibility: private
+  hs-source-dirs: components/internal
+  exposed-modules:
+    Char
+    Dfa
+    Nfa
+    RegexToNfa
+    NfaToDfa
+    Minimize
+    Range
+    RangeMap
+    CharSet
+    Lexer
+    Accept
+    Regex.Core
+    Regex.Dsl
+    AssocList
+    Runtime
 
 common rtsopts
   ghc-options:
@@ -103,26 +124,9 @@ common rtsopts
     -rtsopts
     -with-rtsopts=-N
 
-executable hlex-exe
+common common-test
   import: common-options, rtsopts
-  main-is: Main.hs
-  -- Modules included in this executable, other than Main.
-  -- other-modules:
   build-depends:
-    hlex
-  hs-source-dirs: app
-  
-test-suite hlex-test
-  import: common-options, rtsopts
-  type: exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is: Main.hs
-  other-modules:
-    RangeTest
-    RangeMapTest
-    MinimizeTest
-  build-depends:
-    hlex,
     tasty ^>= 1.4.2.3,
     tasty-quickcheck ^>= 0.10.2,
     tasty-hunit ^>= 0.10.0.3,
@@ -130,11 +134,31 @@ test-suite hlex-test
     quickcheck-instances ^>= 0.3.27,
   build-tool-depends:
     tasty-discover:tasty-discover
+  
+test-suite test
+  import: common-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: components/test
+  build-depends:
+    hlex
 
-benchmark hlex-bench
+test-suite internal-test
+  import: common-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: components/internal-test
+  build-depends:
+    hlex:internal
+  other-modules:
+    RangeMapTest
+    RangeTest
+    MinimizeTest
+
+benchmark bench
   import: common-options, rtsopts
   type: exitcode-stdio-1.0
-  hs-source-dirs: bench
+  hs-source-dirs: components/bench
   main-is: Main.hs
   build-depends:
     hlex,
