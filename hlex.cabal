@@ -27,7 +27,7 @@ flag lld
 extra-source-files:
   CHANGELOG.md
 
-common common-options
+common common-library
   default-language: GHC2021
   default-extensions:
     LambdaCase,
@@ -64,6 +64,40 @@ common common-options
     -Widentities
   build-depends:
     base >= 4.12 && <5,
+
+library
+  import: common-library
+  hs-source-dirs: components/lib
+  exposed-modules:
+    Lib
+  build-depends: hlex:core
+
+library core
+  import: common-library
+  visibility: public
+  hs-source-dirs: components/core
+  exposed-modules:
+    Lib
+  build-depends: hlex:internal
+
+library unicode
+  import: common-library
+  visibility: public
+  hs-source-dirs: components/unicode
+  exposed-modules:
+    Lib
+    
+library th
+  import: common-library
+  visibility: public
+  hs-source-dirs: components/th
+  exposed-modules:
+    Lib
+  build-depends:
+    template-haskell
+
+common internal-deps
+  build-depends:
     text ^>= 2.0,
     template-haskell ^>= 2.18.0.0,
     unordered-containers ^>= 0.2.19.1,
@@ -74,31 +108,9 @@ common common-options
     primitive ^>= 0.7.0.0,
     vector ^>= 0.12.3.1,
     megaparsec ^>= 9.2.1,
-
-library
-  import: common-options
-  hs-source-dirs: components/lib
-  exposed-modules:
-    Lib
-  build-depends: hlex:core
-
-library core
-  import: common-options
-  visibility: public
-  hs-source-dirs: components/core
-  exposed-modules:
-    Lib
-  build-depends: hlex:internal
-
-library unicode
-  import: common-options
-  visibility: public
-  hs-source-dirs: components/unicode
-  exposed-modules:
-    Lib
-
+    
 library internal
-  import: common-options
+  import: common-library, internal-deps
   visibility: private
   hs-source-dirs: components/internal
   exposed-modules:
@@ -118,14 +130,14 @@ library internal
     AssocList
     Runtime
 
-common rtsopts
+common common-rtsopts
   ghc-options:
     -threaded
     -rtsopts
     -with-rtsopts=-N
 
 common common-test
-  import: common-options, rtsopts
+  import: common-library, common-rtsopts
   build-depends:
     tasty ^>= 1.4.2.3,
     tasty-quickcheck ^>= 0.10.2,
@@ -137,29 +149,29 @@ common common-test
   
 test-suite test
   import: common-test
-  type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: components/test
   build-depends:
     hlex
 
 test-suite internal-test
-  import: common-test
-  type: exitcode-stdio-1.0
+  import: common-test, internal-deps
   main-is: Main.hs
   hs-source-dirs: components/internal-test
-  build-depends:
-    hlex:internal
+  build-depends: hlex:internal
   other-modules:
     RangeMapTest
     RangeTest
     MinimizeTest
+    
+common common-bench
+  import: common-library, common-rtsopts
+  build-depends:
+    gauge ^>= 0.2.5,
 
 benchmark bench
-  import: common-options, rtsopts
-  type: exitcode-stdio-1.0
+  import: common-bench
   hs-source-dirs: components/bench
   main-is: Main.hs
   build-depends:
-    hlex,
-    tasty-bench ^>= 0.3.1,
+    hlex

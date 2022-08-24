@@ -19,6 +19,8 @@ module Dfa
   )
 where
 
+import Accept (Accept)
+import AssocList (AssocList)
 import Data.Bifunctor (Bifunctor (bimap))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
@@ -26,15 +28,13 @@ import Data.HashSet (HashSet)
 import Data.Hashable (Hashable)
 import Data.IntMap.Strict (IntMap)
 import Data.Maybe (fromJust)
-import Data.Vector.Persistent qualified as PVec
+import Data.Vector qualified as VB
 import GHC.Exts (fromList, toList)
-import Accept (Accept)
-import AssocList (AssocList)
 
 -- dfa using sets of nfa states
 type NDfa = Dfa' (HashMap StateSet) StateSet
 
-type Dfa = Dfa' PVec.Vector Int
+type Dfa = Dfa' VB.Vector Int
 
 data Dfa' f s a = Dfa
   { starts :: [s],
@@ -79,7 +79,7 @@ emptyState :: State s a
 emptyState = State mempty Nothing
 
 toAssocList :: Dfa a -> Dfa' (AssocList Int) Int a
-toAssocList = transform $ fromList @(AssocList _ _) . zip [0 :: Int ..] . PVec.toList
+toAssocList = transform $ fromList @(AssocList _ _) . zip [0 :: Int ..] . toList
 
 assocs :: Dfa a -> [(Int, State Int a)]
 assocs Dfa {states} = zip [0 :: Int ..] $ toList states
@@ -104,7 +104,7 @@ normalize :: forall s a. Hashable s => Dfa' (HashMap s) s a -> Dfa a
 normalize Dfa {states, starts} = Dfa {states = states', starts = starts'}
   where
     states' =
-      PVec.fromList
+      fromList
         [ convertState s
           | ns <- HashMap.keys states,
             let s = fromJust $ HashMap.lookup ns states

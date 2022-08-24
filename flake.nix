@@ -2,7 +2,7 @@
   description = "A very basic flake";
 
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable"; # primary nixpkgs
+    nixpkgs.url = "nixpkgs-unstable"; # primary nixpkgs
     flake-utils.url = "github:numtide/flake-utils";
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -18,7 +18,7 @@
       {
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
-            haskell.compiler.ghc922
+            haskell.compiler.ghc924
             ormolu
             hlint
             ghcid
