@@ -9,6 +9,10 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HashSet
 import Data.Hashable (Hashable)
+import Data.IntMap (IntMap)
+import Data.IntMap.Strict qualified as IntMap
+import Data.IntSet (IntSet)
+import Data.IntSet qualified as IntSet
 import Data.Maybe (fromJust)
 import Debug.Trace
 import GHC.Exts (fromList, toList)
@@ -36,7 +40,7 @@ import Text.HLex.Internal.Dfa qualified as Dfa
 --           end;
 --      end;
 -- end;
-minimize :: Show a => Dfa a -> Dfa a
+minimize :: Dfa a -> Dfa a
 minimize dfa = Dfa.normalize dfa'
   where
     dfa' =
@@ -58,7 +62,7 @@ minimize dfa = Dfa.normalize dfa'
 
     equivalent = dfaEquivalentStates dfa
 
-dfaEquivalentStates :: Show a => Dfa a -> [Dfa.StateSet]
+dfaEquivalentStates :: Dfa a -> [Dfa.StateSet]
 dfaEquivalentStates dfa = go p q
   where
     p = acceptingSets ++ [nonAcceptingSet]
@@ -69,36 +73,30 @@ dfaEquivalentStates dfa = go p q
 
     -- !_ = traceId $ "bigMap: " ++ show bigMap
 
-    -- we need to distinguish accepting states from each other
-    -- unless they have the same priority
-    acceptingSets =
-      undefined
-    -- acceptingAssoc
-    --   & List.sortOn (Accept.priority . snd)
-    --   & List.groupBy ((==) `on` Accept.priority . snd)
-    --   & (fmap . fmap) fst
-    --   & fmap (fromList @(HashSet _))
+    -- we will make every accepting state distinct from each other
+    -- because it is not that useful to merge accepting states
+    acceptingSets = IntSet.singleton <$> acceptingAssoc
 
     ( acceptingAssoc,
-      fromList @(HashSet _) -> nonAcceptingSet
+      fromList @IntSet -> nonAcceptingSet
       ) =
         dfa
           & Dfa.assocs
           & fmap
             ( \(i, Dfa.State {accept}) -> case accept of
-                Just accept -> Left (i, accept)
+                Just _accept -> Left i
                 Nothing -> Right i
             )
           & Either.partitionEithers
 
     -- trans -> to -> from
-    bigMap :: HashMap Int (HashMap Int Dfa.StateSet)
-    bigMap = HashMap.fromListWith (HashMap.unionWith HashSet.union) $
+    bigMap :: IntMap (IntMap Dfa.StateSet)
+    bigMap = IntMap.fromListWith (IntMap.unionWith IntSet.union) $
       Dfa.forFromTransTo dfa $ \from trans to ->
-        [(trans, HashMap.singleton to (HashSet.singleton from))]
+        [(trans, IntMap.singleton to (IntSet.singleton from))]
 
-    preimage :: HashMap Int Dfa.StateSet -> Dfa.StateSet -> Dfa.StateSet
-    preimage invMap a = foldMap' id $ HashMap.intersection invMap $ HashSet.toMap a
+    preimage :: IntMap Dfa.StateSet -> Dfa.StateSet -> Dfa.StateSet
+    preimage invMap a = foldMap' id $ IntMap.intersection invMap $ IntMap.fromSet (const ()) a
 
     go :: [Dfa.StateSet] -> HashSet Dfa.StateSet -> [Dfa.StateSet]
     go p q | trace ("p: " ++ show p ++ " q: " ++ show q) False = undefined
@@ -109,22 +107,22 @@ dfaEquivalentStates dfa = go p q
         !_ = traceId $ "xs: " ++ show xs
         xs =
           [ x
-            | invMap <- HashMap.elems bigMap,
+            | invMap <- IntMap.elems bigMap,
               let x = preimage invMap a,
-              not $ HashSet.null x
+              not $ IntSet.null x
           ]
         go0 (!p, !q) x = foldl' go1 ([], q) p
           where
             go1 (pAcc, q) y
               | (y1, y2) <- refineSet x y,
-                not $ HashSet.null y1,
-                not $ HashSet.null y2 = do
+                not $ IntSet.null y1,
+                not $ IntSet.null y2 = do
                   let !q' =
                         if HashSet.member y q
                           then HashSet.insert y2 $ HashSet.insert y1 q
                           else
                             HashSet.insert
-                              ( if HashSet.size y1 < HashSet.size y2
+                              ( if IntSet.size y1 < IntSet.size y2
                                   then y1
                                   else y2
                               )
@@ -133,13 +131,13 @@ dfaEquivalentStates dfa = go p q
               | otherwise = (y : pAcc, q)
     go p _ = p
 
-refineSet :: Hashable k => HashSet k -> HashSet k -> (HashSet k, HashSet k)
+refineSet :: IntSet -> IntSet -> (IntSet, IntSet)
 refineSet setX setY = (setY1, setY2)
   where
-    setY1 = setY `HashSet.intersection` setX
-    setY2 = setY `HashSet.difference` setX
+    setY1 = setY `IntSet.intersection` setX
+    setY2 = setY `IntSet.difference` setX
 
-headSet :: Hashable a => HashSet a -> a
+headSet :: IntSet -> Int
 headSet = head . toList
 
 takeSet :: Hashable a => HashSet a -> Maybe (a, HashSet a)

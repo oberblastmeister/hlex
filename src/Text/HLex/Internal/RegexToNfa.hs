@@ -8,7 +8,7 @@ import Control.Monad.State.Strict (MonadState)
 import Control.Monad.State.Strict qualified as State
 import Data.ByteString qualified as B
 import Data.Foldable (foldlM, for_)
-import Data.HashSet qualified as HashSet
+import Data.IntSet qualified as IntSet
 import Data.RangeSet.List qualified as RSet
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
@@ -96,7 +96,7 @@ charSetToUtf8Ranges = concatMap (toUtf8Range . both encodeCharUtf8) . CharSet.to
 charSetEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> CharSet -> m ()
 charSetEdge from to set = do
   for_ (charSetToUtf8Ranges set) \(x, y) ->
-    utf8RangeTrans from to (x, y)
+    utf8RangeEdge from to (x, y)
 
 byteSetEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> ByteSet -> m ()
 byteSetEdge from to range = do
@@ -109,28 +109,28 @@ byteSetEdge from to range = do
             nfa
       }
 
-utf8RangeTrans :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> ([Byte], [Byte]) -> m ()
-utf8RangeTrans from to ([], []) = emptyEdge from to
-utf8RangeTrans from to ([x], [y]) = byteSetEdge from to $ RSet.singletonRange (x, y)
-utf8RangeTrans from to (x : xs, y : ys)
+utf8RangeEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> ([Byte], [Byte]) -> m ()
+utf8RangeEdge from to ([], []) = emptyEdge from to
+utf8RangeEdge from to ([x], [y]) = byteSetEdge from to $ RSet.singletonRange (x, y)
+utf8RangeEdge from to (x : xs, y : ys)
   | x == y = do
       s <- freshState
       byteSetEdge from s $ RSet.singleton x
-      utf8RangeTrans s to (xs, ys)
+      utf8RangeEdge s to (xs, ys)
   | x < y = do
       do
         s <- freshState
         byteSetEdge from s $ RSet.singleton x
-        utf8RangeTrans s to (xs, 0xff <$ xs)
+        utf8RangeEdge s to (xs, 0xff <$ xs)
       do
         s <- freshState
         byteSetEdge from s $ RSet.singleton y
-        utf8RangeTrans s to (0x00 <$ ys, ys)
+        utf8RangeEdge s to (0x00 <$ ys, ys)
       when (x + 1 <= y - 1) do
         s <- freshState
         byteSetEdge from s $ RSet.singletonRange (x + 1, y - 1)
         anyBytesEdge s to $ length xs
-utf8RangeTrans _ _ _ = error "utf8RangeTrans: invalid utf8 range"
+utf8RangeEdge _ _ _ = error "utf8RangeEdge: invalid utf8 range"
 
 anyBytesEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> Int -> m ()
 anyBytesEdge from to n = do
@@ -153,7 +153,7 @@ emptyEdge a b = do
       { nfa =
           PVec.adjust
             ( \st@Nfa.State {emptyTransitions} ->
-                st {Nfa.emptyTransitions = HashSet.insert b emptyTransitions}
+                st {Nfa.emptyTransitions = IntSet.insert b emptyTransitions}
             )
             a
             nfa

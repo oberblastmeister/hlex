@@ -26,8 +26,9 @@ tests =
                           (1, newState $ fromList [(2, 2), (3, 3)]),
                           (2, newState' 4 4),
                           (3, newState' 4 5),
-                          (4, State mempty (Just ("first"))),
-                          (5, State mempty (Just ("second")))
+                          (4, newState' 6 6),
+                          (5, newState' 6 6),
+                          (6, State mempty (Just "second"))
                         ]
                   }
             equiv = Minimize.dfaEquivalentStates dfa

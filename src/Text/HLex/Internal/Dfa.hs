@@ -1,14 +1,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Text.HLex.Internal.Dfa
-  ( NDfa,
+  ( Pdfa,
     Dfa,
     Dfa' (..),
     State (..),
-    NState,
+    PState,
     StateSet,
-    inNDfa,
-    addNDfa,
+    inPdfa,
+    addPdfa,
     forFromTransTo,
     toAssocList,
     assocs,
@@ -22,17 +22,17 @@ where
 import Data.Bifunctor (Bifunctor (bimap))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet (HashSet)
 import Data.Hashable (Hashable)
 import Data.IntMap (IntMap)
+import Data.IntMap.Strict qualified as IntMap
+import Data.IntSet (IntSet)
 import Data.Maybe (fromJust)
 import Data.Vector.Persistent qualified as PVec
-import GHC.Exts (fromList, toList)
+import GHC.Exts (fromList)
 import Text.HLex.Internal.AssocList (AssocList)
-import qualified Data.IntMap.Strict as IntMap
 
 -- dfa using sets of nfa states
-type NDfa = Dfa' (HashMap StateSet) StateSet
+type Pdfa = Dfa' (HashMap StateSet) StateSet
 
 type Dfa = Dfa' PVec.Vector Int
 
@@ -61,9 +61,9 @@ data State s a = State
   }
   deriving (Show)
 
-type NState = State StateSet
+type PState = State StateSet
 
-type StateSet = HashSet Int
+type StateSet = IntSet
 
 instance Bifunctor State where
   bimap f g State {transitions, accept} =
@@ -82,13 +82,13 @@ toAssocList :: Dfa a -> Dfa' (AssocList Int) Int a
 toAssocList = transform $ fromList @(AssocList _ _) . zip [0 :: Int ..] . PVec.toList
 
 assocs :: Dfa a -> [(Int, State Int a)]
-assocs Dfa {states} = zip [0 :: Int ..] $ toList states
+assocs Dfa {states} = zip [0 :: Int ..] $ PVec.toList states
 
-inNDfa :: StateSet -> NDfa a -> Bool
-inNDfa set Dfa {states} = set `HashMap.member` states
+inPdfa :: StateSet -> Pdfa a -> Bool
+inPdfa set Dfa {states} = set `HashMap.member` states
 
-addNDfa :: StateSet -> NState a -> NDfa a -> NDfa a
-addNDfa set s dfa@Dfa {states} = dfa {states = HashMap.insert set s states}
+addPdfa :: StateSet -> PState a -> Pdfa a -> Pdfa a
+addPdfa set s dfa@Dfa {states} = dfa {states = HashMap.insert set s states}
 
 forFromTransTo :: Dfa a -> (Int -> Int -> Int -> [b]) -> [b]
 forFromTransTo Dfa {states} f = do

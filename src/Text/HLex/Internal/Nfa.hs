@@ -12,17 +12,15 @@ where
 
 import Data.Foldable (foldl')
 import Data.Function ((&))
-import Data.HashSet (HashSet)
-import Data.HashSet qualified as HashSet
-import Data.RangeSet.List (RSet)
+import Data.IntSet (IntSet)
+import Data.IntSet qualified as IntSet
 import Data.Vector qualified as VB
-import Data.Word (Word8)
 import GHC.Exts (toList)
 import Text.HLex.Internal.Utils
 
 type StateId = Int
 
-type StateSet = HashSet StateId
+type StateSet = IntSet
 
 data Nfa a = Nfa
   { starts :: [StateId],
@@ -31,7 +29,7 @@ data Nfa a = Nfa
 
 data State a = State
   { transitions :: [(ByteSet, StateId)],
-    emptyTransitions :: !(HashSet StateId),
+    emptyTransitions :: !IntSet,
     accept :: Maybe a
   }
 
@@ -51,9 +49,9 @@ closure starts nfa = go starts $ toList starts
         (!set', !ss') =
           foldl'
             ( \(!set, !ss) s ->
-                if HashSet.member s set
+                if IntSet.member s set
                   then (set, ss)
-                  else (HashSet.insert s set, s : ss)
+                  else (IntSet.insert s set, s : ss)
             )
             (set, ss)
             etrans
