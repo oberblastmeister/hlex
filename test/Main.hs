@@ -1,1 +1,5 @@
-{-# OPTIONS_GHC -F -pgmF tasty-discover #-}
+import MinimizeTest qualified
+import Test.Tasty
+
+main :: IO ()
+main = defaultMain $ testGroup "main" [MinimizeTest.tests]

@@ -42,6 +42,7 @@ common common-options
     NoGeneralizedNewtypeDeriving,
     DerivingVia,
     PartialTypeSignatures,
+    BlockArguments,
   ghc-options:
     -Wall
     -Wredundant-constraints
@@ -58,15 +59,17 @@ common common-options
   build-depends:
     base >= 4.12 && <5,
     text ^>= 2.0,
+    bytestring,
     template-haskell ^>= 2.18.0.0,
-    unordered-containers ^>= 0.2.19.1,
-    hashable ^>= 1.4.0.2,
-    containers ^>= 0.6.5.1,
-    pvector ^>= 0.1.0.1,
-    mtl ^>= 2.2.2,
-    primitive ^>= 0.7.0.0,
-    vector ^>= 0.12.3.1,
-    megaparsec ^>= 9.2.1,
+    unordered-containers,
+    hashable,
+    containers,
+    pvector,
+    mtl,
+    primitive,
+    vector,
+    range-set-list,
+    megaparsec,
 
 library
   import: common-options
@@ -74,6 +77,8 @@ library
   exposed-modules:
     Text.HLex
       Text.HLex.Internal.Char
+      Text.HLex.Internal.CharSet
+      Text.HLex.Internal.Utils
       Text.HLex.Internal.Dfa
       Text.HLex.Internal.Nfa
       Text.HLex.Internal.RegexToNfa
@@ -82,9 +87,7 @@ library
       Text.HLex.Internal.Range
       Text.HLex.Internal.RangeMap
       Text.HLex.Internal.Lexer
-      Text.HLex.Internal.Accept
-      Text.HLex.Internal.Regex.Core
-      Text.HLex.Internal.Regex.Dsl
+      Text.HLex.Internal.Regex
       Text.HLex.Internal.AssocList
       Text.HLex.Internal.Runtime
     
@@ -115,13 +118,10 @@ test-suite hlex-test
     MinimizeTest
   build-depends:
     hlex,
-    tasty ^>= 1.4.2.3,
-    tasty-quickcheck ^>= 0.10.2,
-    tasty-hunit ^>= 0.10.0.3,
-    QuickCheck ^>= 2.14.2,
-    quickcheck-instances ^>= 0.3.27,
-  build-tool-depends:
-    tasty-discover:tasty-discover
+    tasty,
+    tasty-hedgehog,
+    hedgehog,
+    tasty-hunit,
 
 benchmark hlex-bench
   import: common-options, rtsopts

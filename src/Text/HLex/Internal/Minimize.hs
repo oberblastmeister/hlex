@@ -13,7 +13,6 @@ import Data.List qualified as List
 import Data.Maybe (fromJust)
 import Debug.Trace
 import GHC.Exts (fromList, toList)
-import Text.HLex.Internal.Accept qualified as Accept
 import Text.HLex.Internal.AssocList qualified as AssocList
 import Text.HLex.Internal.Dfa (Dfa, NDfa)
 import Text.HLex.Internal.Dfa qualified as Dfa
@@ -38,7 +37,7 @@ import Text.HLex.Internal.Dfa qualified as Dfa
 --           end;
 --      end;
 -- end;
-minimize :: Dfa a -> Dfa a
+minimize :: Show a => Dfa a -> Dfa a
 minimize dfa = Dfa.normalize dfa'
   where
     dfa' =
@@ -60,25 +59,26 @@ minimize dfa = Dfa.normalize dfa'
 
     equivalent = dfaEquivalentStates dfa
 
-dfaEquivalentStates :: Dfa a -> [Dfa.StateSet]
+dfaEquivalentStates :: Show a => Dfa a -> [Dfa.StateSet]
 dfaEquivalentStates dfa = go p q
   where
     p = acceptingSets ++ [nonAcceptingSet]
-    q = fromList @(HashSet _) $ acceptingSets
+    q = fromList @(HashSet _) $ acceptingSets ++ [nonAcceptingSet]
 
-    !_ = traceId $ "acceptingSets: " ++ show acceptingSets
-    !_ = traceId $ "nonAcceptingSet: " ++ show nonAcceptingSet
+    -- !_ = traceId $ "acceptingSets: " ++ show acceptingSets
+    -- !_ = traceId $ "nonAcceptingSet: " ++ show nonAcceptingSet
 
     -- !_ = traceId $ "bigMap: " ++ show bigMap
 
     -- we need to distinguish accepting states from each other
     -- unless they have the same priority
     acceptingSets =
-      acceptingAssoc
-        & List.sortOn (Accept.priority . snd)
-        & List.groupBy ((==) `on` Accept.priority . snd)
-        & (fmap . fmap) fst
-        & fmap (fromList @(HashSet _))
+      undefined
+      -- acceptingAssoc
+      --   & List.sortOn (Accept.priority . snd)
+      --   & List.groupBy ((==) `on` Accept.priority . snd)
+      --   & (fmap . fmap) fst
+      --   & fmap (fromList @(HashSet _))
 
     ( acceptingAssoc,
       fromList @(HashSet _) -> nonAcceptingSet
@@ -100,7 +100,7 @@ dfaEquivalentStates dfa = go p q
     preimage :: HashMap Int Dfa.StateSet -> Dfa.StateSet -> Dfa.StateSet
     preimage invMap a = foldMap' id $ HashMap.intersection invMap $ HashSet.toMap a
 
-    go :: [Dfa.StateSet] -> HashSet (Dfa.StateSet) -> [Dfa.StateSet]
+    go :: [Dfa.StateSet] -> HashSet Dfa.StateSet -> [Dfa.StateSet]
     go p q | trace ("p: " ++ show p ++ " q: " ++ show q) False = undefined
     go !p (takeSet -> Just (a, q)) = go p' q'
       where

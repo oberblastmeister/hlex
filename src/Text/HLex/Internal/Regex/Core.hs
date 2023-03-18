@@ -83,5 +83,10 @@ atLeast n r = Concat (exactly n r) (Rep r)
 --     . fmap (charRange . Range.point)
 --     . T.unpack
 
-foldRE :: Foldable t => (Regex -> Regex -> Regex) -> t Regex -> Regex
-foldRE f = foldr f Empty
+-- bruh = lex do
+--   (RE.star ("adsfdsf" <|> "adsfadsf") <> RE.star "adfadsf") ~= [|Int|]
+--   [re|adfsdsff] ~= [|Tok.Int|]
+--   ('"' <> RE.star RE.word <> '"') ~=> [|Tok.String . T.drop 1 . T.dropEnd 1|]
+--   [re|adsfadsf|] ~= [|Tok.Int|]
+--   [re|asdfadsf|] ~= [|Tok.Int|]
+--   [re|adfdsfff|] ~= [|Tok.Int]

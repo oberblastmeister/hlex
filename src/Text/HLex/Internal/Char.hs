@@ -8,6 +8,7 @@ import Control.Monad (when)
 import Data.Primitive qualified as Primitive
 import Data.Text qualified as T
 import Data.Text.Array qualified as T.Array
+import Data.Text.Encoding qualified as T
 import Data.Text.Internal qualified as T.Internal
 import Data.Word (Word8)
 import GHC.Exts (toList)
@@ -32,9 +33,4 @@ import Text.HLex.Internal.Range qualified as Range
 --     lenY = length y
 
 encodeUtf8 :: Char -> [Word8]
-encodeUtf8 c = case T.singleton c of
-  T.Internal.Text (T.Array.ByteArray bs) off len -> do
-    when (off /= 0) $ error "offset should be zero"
-    let barr = Primitive.ByteArray bs
-    when (len /= Primitive.sizeofByteArray barr) $ error "len should be equal to byte array length"
-    toList barr
+encodeUtf8 = toList . T.encodeUtf8 . T.singleton

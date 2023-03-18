@@ -24,11 +24,12 @@ import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
 import Data.Hashable (Hashable)
+import Data.IntMap (IntMap)
 import Data.Maybe (fromJust)
 import Data.Vector.Persistent qualified as PVec
 import GHC.Exts (fromList, toList)
-import Text.HLex.Internal.Accept (Accept)
 import Text.HLex.Internal.AssocList (AssocList)
+import qualified Data.IntMap.Strict as IntMap
 
 -- dfa using sets of nfa states
 type NDfa = Dfa' (HashMap StateSet) StateSet
@@ -55,8 +56,8 @@ instance Functor f => Bifunctor (Dfa' f) where
       }
 
 data State s a = State
-  { transitions :: !(HashMap Int s),
-    accept :: Maybe (Accept a)
+  { transitions :: !(IntMap s),
+    accept :: Maybe a
   }
   deriving (Show)
 
@@ -68,10 +69,10 @@ instance Bifunctor State where
   bimap f g State {transitions, accept} =
     State
       { transitions = fmap f transitions,
-        accept = (fmap . fmap) g accept
+        accept = fmap g accept
       }
 
-newState :: HashMap Int s -> State s a
+newState :: IntMap s -> State s a
 newState transitions = State {transitions, accept = Nothing}
 
 emptyState :: State s a
@@ -92,7 +93,7 @@ addNDfa set s dfa@Dfa {states} = dfa {states = HashMap.insert set s states}
 forFromTransTo :: Dfa a -> (Int -> Int -> Int -> [b]) -> [b]
 forFromTransTo Dfa {states} f = do
   (from, state) <- zip [0 :: Int ..] $ PVec.toList states
-  (trans, to) <- HashMap.toList $ transitions state
+  (trans, to) <- IntMap.toList $ transitions state
   f from trans to
 {-# INLINE forFromTransTo #-}
 

@@ -1,6 +1,4 @@
 packages:
     ./
 
-constraints: hlex +tests
-
 test-show-details: direct

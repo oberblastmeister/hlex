@@ -1,6 +1,9 @@
 module Text.HLex.Internal.Nfa
   ( Nfa (..),
     State (..),
+    ByteSet,
+    StateId,
+    StateSet,
     newNfa,
     defState,
     closure,
@@ -11,20 +14,25 @@ import Data.Foldable (foldl')
 import Data.Function ((&))
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HashSet
+import Data.RangeSet.List (RSet)
 import Data.Vector qualified as VB
+import Data.Word (Word8)
 import GHC.Exts (toList)
-import Text.HLex.Internal.Accept (Accept)
-import Text.HLex.Internal.Range (Range)
+import Text.HLex.Internal.Utils
+
+type StateId = Int
+
+type StateSet = HashSet StateId
 
 data Nfa a = Nfa
-  { starts :: [Int],
+  { starts :: [StateId],
     states :: !(VB.Vector (State a))
   }
 
 data State a = State
-  { transitions :: [(Range, Int)],
-    emptyTransitions :: !(HashSet Int),
-    accept :: Maybe (Accept a)
+  { transitions :: [(ByteSet, StateId)],
+    emptyTransitions :: !(HashSet StateId),
+    accept :: Maybe a
   }
 
 newNfa :: Nfa a
@@ -33,7 +41,7 @@ newNfa = Nfa {starts = mempty, states = mempty}
 defState :: State a
 defState = State {transitions = mempty, emptyTransitions = mempty, accept = Nothing}
 
-closure :: HashSet Int -> Nfa a -> HashSet Int
+closure :: StateSet -> Nfa a -> StateSet
 closure starts nfa = go starts $ toList starts
   where
     go set [] = set
