@@ -20,7 +20,7 @@ newtype AssocList k v = AssocList {unAssocList :: [(k, v)]}
   deriving (Functor, Foldable, Traversable)
 
 instance Bifunctor AssocList where
-  bimap f g = AssocList . fmap (\(x, y) -> (f x, g y)) . unAssocList
+  bimap f g = AssocList . fmap (bimap f g) . unAssocList
 
 instance IsList (AssocList k v) where
   type Item (AssocList k v) = (k, v)

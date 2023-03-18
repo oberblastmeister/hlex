@@ -1,7 +1,5 @@
 module Text.HLex.Internal.Lexer where
 
-import Control.Monad.Writer
-import Language.Haskell.TH (Code, Q)
 import Text.HLex.Internal.Regex
 
 newtype Lexer a = Lexer {rules :: [Rule a]}

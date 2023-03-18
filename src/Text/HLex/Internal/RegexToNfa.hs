@@ -66,7 +66,7 @@ regexToNfa from to = \case
     regexToNfa from to r1
     regexToNfa from to r2
   RE.Set set -> charSetEdge from to set
-  RE.Star r -> do
+  RE.Rep r -> do
     s <- freshState
     emptyEdge from s
     regexToNfa s s r
