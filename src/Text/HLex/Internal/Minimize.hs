@@ -3,18 +3,17 @@ module Text.HLex.Internal.Minimize where
 import Data.Bifunctor (first)
 import Data.Either qualified as Either
 import Data.Foldable (foldMap', foldl')
-import Data.Function (on, (&))
+import Data.Function ((&))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HashSet
 import Data.Hashable (Hashable)
-import Data.List qualified as List
 import Data.Maybe (fromJust)
 import Debug.Trace
 import GHC.Exts (fromList, toList)
 import Text.HLex.Internal.AssocList qualified as AssocList
-import Text.HLex.Internal.Dfa (Dfa, NDfa)
+import Text.HLex.Internal.Dfa (Dfa)
 import Text.HLex.Internal.Dfa qualified as Dfa
 
 -- % Hopcroft's Algorithm for DFA minimization (cut/pasted from Wikipedia): % X refines Y into Y1 and Y2 means
@@ -74,16 +73,17 @@ dfaEquivalentStates dfa = go p q
     -- unless they have the same priority
     acceptingSets =
       undefined
-      -- acceptingAssoc
-      --   & List.sortOn (Accept.priority . snd)
-      --   & List.groupBy ((==) `on` Accept.priority . snd)
-      --   & (fmap . fmap) fst
-      --   & fmap (fromList @(HashSet _))
+    -- acceptingAssoc
+    --   & List.sortOn (Accept.priority . snd)
+    --   & List.groupBy ((==) `on` Accept.priority . snd)
+    --   & (fmap . fmap) fst
+    --   & fmap (fromList @(HashSet _))
 
     ( acceptingAssoc,
       fromList @(HashSet _) -> nonAcceptingSet
       ) =
-        dfa & Dfa.assocs
+        dfa
+          & Dfa.assocs
           & fmap
             ( \(i, Dfa.State {accept}) -> case accept of
                 Just accept -> Left (i, accept)

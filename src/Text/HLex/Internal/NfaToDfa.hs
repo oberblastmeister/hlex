@@ -3,10 +3,8 @@ module Text.HLex.Internal.NfaToDfa
   )
 where
 
-import Data.Bifunctor (second)
 import Data.Foldable qualified as Foldable
 import Data.Function ((&))
-import Data.HashSet qualified as HashSet
 import Data.List qualified as List
 import Data.List.NonEmpty qualified as NE
 import Data.Vector qualified as VB
@@ -15,8 +13,6 @@ import Text.HLex.Internal.Dfa (Dfa, Dfa' (Dfa), NDfa)
 import Text.HLex.Internal.Dfa qualified as Dfa
 import Text.HLex.Internal.Nfa (Nfa (Nfa))
 import Text.HLex.Internal.Nfa qualified as Nfa
-import Text.HLex.Internal.RangeMap (RangeMap)
-import Text.HLex.Internal.RangeMap qualified as RangeMap
 
 nfaToDfa :: Ord a => Nfa a -> Dfa a
 nfaToDfa = Dfa.normalize . nfaToNDfa

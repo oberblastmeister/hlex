@@ -76,7 +76,6 @@ library
   hs-source-dirs: src
   exposed-modules:
     Text.HLex
-      Text.HLex.Internal.Char
       Text.HLex.Internal.CharSet
       Text.HLex.Internal.Utils
       Text.HLex.Internal.Dfa
@@ -84,8 +83,6 @@ library
       Text.HLex.Internal.RegexToNfa
       Text.HLex.Internal.NfaToDfa
       Text.HLex.Internal.Minimize
-      Text.HLex.Internal.Range
-      Text.HLex.Internal.RangeMap
       Text.HLex.Internal.Lexer
       Text.HLex.Internal.Regex
       Text.HLex.Internal.AssocList
@@ -113,8 +110,6 @@ test-suite hlex-test
   hs-source-dirs: test
   main-is: Main.hs
   other-modules:
-    RangeTest
-    RangeMapTest
     MinimizeTest
   build-depends:
     hlex,
