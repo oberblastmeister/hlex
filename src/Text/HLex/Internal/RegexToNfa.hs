@@ -1,5 +1,6 @@
 module Text.HLex.Internal.RegexToNfa
   ( lexerToNfa,
+    regexToNfa,
   )
 where
 
@@ -23,6 +24,7 @@ import Text.HLex.Internal.Nfa (Nfa (Nfa))
 import Text.HLex.Internal.Nfa qualified as Nfa
 import Text.HLex.Internal.Regex qualified as RE
 import Text.HLex.Internal.Utils
+import Debug.Trace
 
 data NfaBuilder a = NfaBuilder
   { nfa :: !(PVec.Vector (Nfa.State a)),
@@ -45,6 +47,7 @@ lexerToNfa' Lexer {Lexer.rules} = do
   start <- freshState
   for_ rules $ \rule -> do
     (s1, _s2) <- ruleToNfa rule
+    -- need to connect this to the end
     emptyEdge start s1
   pure start
 
@@ -52,23 +55,33 @@ ruleToNfa :: MonadState (NfaBuilder (Lexer.Accept a)) m => Lexer.Rule a -> m (In
 ruleToNfa Lexer.Rule {Lexer.regex, Lexer.accept} = do
   s1 <- freshState
   s2 <- freshStateWith Nfa.defState {Nfa.accept = Just accept}
-  regexToNfa s1 s2 regex
+  regexToNfa' s1 s2 regex
   pure (s1, s2)
 
-regexToNfa :: MonadNfa a m => Int -> Int -> RE.Regex -> m ()
-regexToNfa from to = \case
+regexToNfa :: a -> RE.Regex -> Nfa a
+regexToNfa accept regex = Nfa {Nfa.start, Nfa.states = VB.fromListN (PVec.length nfa) (PVec.toList nfa)}
+  where
+    (start, NfaBuilder {nfa}) = flip State.runState newNfaBuilder do
+      s1 <- freshState
+      s2 <- freshStateWith Nfa.defState {Nfa.accept = Just accept}
+      regexToNfa' s1 s2 regex
+      pure s1
+
+regexToNfa' :: MonadNfa a m => Int -> Int -> RE.Regex -> m ()
+regexToNfa' from to = \case
+  RE.Empty -> emptyEdge from to
   RE.Cat r1 r2 -> do
     s <- freshState
-    regexToNfa from s r1
-    regexToNfa s to r2
+    regexToNfa' from s r1
+    regexToNfa' s to r2
   RE.Alt r1 r2 -> do
-    regexToNfa from to r1
-    regexToNfa from to r2
+    regexToNfa' from to r1
+    regexToNfa' from to r2
   RE.Set set -> charSetEdge from to set
   RE.Rep r -> do
     s <- freshState
     emptyEdge from s
-    regexToNfa s s r
+    regexToNfa' s s r
     emptyEdge s to
 
 newNfaBuilder :: NfaBuilder a
@@ -145,16 +158,16 @@ anyBytesEdge from to n = do
   emptyEdge s to
 
 emptyEdge :: MonadNfa a m => Int -> Int -> m ()
-emptyEdge a b = do
+emptyEdge from to = do
   State.modify' $ \builder@NfaBuilder {nfa} ->
     -- oof, this is why lenses exist
     builder
       { nfa =
           PVec.adjust
             ( \st@Nfa.State {emptyTransitions} ->
-                st {Nfa.emptyTransitions = IntSet.insert b emptyTransitions}
+                st {Nfa.emptyTransitions = IntSet.insert to emptyTransitions}
             )
-            a
+            from
             nfa
       }
 

@@ -14,7 +14,6 @@ import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
 import Data.IntSet qualified as IntSet
 import Data.Maybe (fromJust)
-import Debug.Trace
 import GHC.Exts (fromList, toList)
 import Text.HLex.Internal.AssocList qualified as AssocList
 import Text.HLex.Internal.Dfa (Dfa)
@@ -102,12 +101,12 @@ dfaEquivalentStates dfa = go p q
     preimage invMap a = foldMap' id $ IntMap.intersection invMap $ IntMap.fromSet (const ()) a
 
     go :: [Dfa.StateSet] -> HashSet Dfa.StateSet -> [Dfa.StateSet]
-    go p q | trace ("p: " ++ show p ++ " q: " ++ show q) False = undefined
+    -- go p q | trace ("p: " ++ show p ++ " q: " ++ show q) False = undefined
     go !p (takeSet -> Just (a, q)) = go p' q'
       where
-        !_ = traceId $ "a: " ++ show a
+        -- !_ = traceId $ "a: " ++ show a
         (p', q') = foldl' go0 (p, q) xs
-        !_ = traceId $ "xs: " ++ show xs
+        -- !_ = traceId $ "xs: " ++ show xs
         xs =
           [ x
             | invMap <- IntMap.elems bigMap,

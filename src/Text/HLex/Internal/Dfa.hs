@@ -16,25 +16,31 @@ module Text.HLex.Internal.Dfa
     normalize,
     newState,
     emptyState,
+    simulate,
+    valid,
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Bifunctor (Bifunctor (bimap))
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as B
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.Hashable (Hashable)
 import Data.IntMap (IntMap)
-import Data.IntMap.Strict qualified as IntMap
+import Data.IntMap qualified as IntMap
 import Data.IntSet (IntSet)
 import Data.Maybe (fromJust)
-import Data.Vector.Persistent qualified as PVec
+import Data.Vector qualified as VB
+import Data.Word (Word8)
 import GHC.Exts (fromList)
 import Text.HLex.Internal.AssocList (AssocList)
 
 -- dfa using sets of nfa states
 type Pdfa = Dfa' (HashMap StateSet) StateSet
 
-type Dfa = Dfa' PVec.Vector Int
+type Dfa = Dfa' VB.Vector Int
 
 data Dfa' f s a = Dfa
   { start :: s,
@@ -72,6 +78,14 @@ instance Bifunctor State where
         accept = fmap g accept
       }
 
+valid :: Dfa a -> Bool
+valid Dfa {start, states} = validStateId start && all validState states
+  where
+    validState State {transitions} =
+      all validTransition (IntMap.toList transitions)
+    validTransition (_, to) = validStateId to
+    validStateId s = s >= 0 && s < VB.length states
+
 newState :: IntMap s -> State s a
 newState transitions = State {transitions, accept = Nothing}
 
@@ -79,10 +93,10 @@ emptyState :: State s a
 emptyState = State mempty Nothing
 
 toAssocList :: Dfa a -> Dfa' (AssocList Int) Int a
-toAssocList = transform $ fromList @(AssocList _ _) . zip [0 :: Int ..] . PVec.toList
+toAssocList = transform $ fromList @(AssocList _ _) . zip [0 :: Int ..] . VB.toList
 
 assocs :: Dfa a -> [(Int, State Int a)]
-assocs Dfa {states} = zip [0 :: Int ..] $ PVec.toList states
+assocs Dfa {states} = zip [0 :: Int ..] $ VB.toList states
 
 inPdfa :: StateSet -> Pdfa a -> Bool
 inPdfa set Dfa {states} = set `HashMap.member` states
@@ -92,7 +106,7 @@ addPdfa set s dfa@Dfa {states} = dfa {states = HashMap.insert set s states}
 
 forFromTransTo :: Dfa a -> (Int -> Int -> Int -> [b]) -> [b]
 forFromTransTo Dfa {states} f = do
-  (from, state) <- zip [0 :: Int ..] $ PVec.toList states
+  (from, state) <- zip [0 :: Int ..] $ VB.toList states
   (trans, to) <- IntMap.toList $ transitions state
   f from trans to
 {-# INLINE forFromTransTo #-}
@@ -104,7 +118,7 @@ normalize :: forall s a. Hashable s => Dfa' (HashMap s) s a -> Dfa a
 normalize Dfa {states, start} = Dfa {states = states', start = start'}
   where
     states' =
-      PVec.fromList
+      VB.fromList
         [ convertState s
           | (ns, _) <- stateList,
             let s = fromJust $ HashMap.lookup ns states
@@ -121,3 +135,17 @@ normalize Dfa {states, start} = Dfa {states = states', start = start'}
     stateList = zip (HashMap.keys states) [0 :: Int ..]
 
     stateMap = fromList stateList
+
+simulate :: ByteString -> Dfa a -> Maybe (Int, a)
+simulate bs Dfa {start, states} = go start (0 :: Int) Nothing
+  where
+    go s i lastMatch = case B.indexMaybe bs i of
+      Nothing -> result
+      Just b ->
+        case IntMap.lookup (fromIntegral @Word8 @Int b) (transitions state) of
+          Nothing -> result
+          Just s' -> go s' (i + 1) newMatch
+      where
+        state = states VB.! s
+        newMatch = accept state <|> lastMatch
+        result = (i,) <$> newMatch

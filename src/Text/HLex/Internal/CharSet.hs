@@ -10,17 +10,22 @@ module Text.HLex.Internal.CharSet
     toRangeList,
     fromString,
     fromPred,
+    null,
   )
 where
 
 import Data.RangeSet.List (RSet)
 import Data.RangeSet.List qualified as RSet
+import Prelude hiding (null)
 
 newtype CharSet = CharSet {unCharSet :: RSet Char}
   deriving (Show, Eq, Ord, Semigroup, Monoid) via RSet Char
 
 empty :: CharSet
 empty = CharSet RSet.empty
+
+null :: CharSet -> Bool
+null = RSet.null . unCharSet
 
 singleton :: Char -> CharSet
 singleton = CharSet . RSet.singleton
@@ -47,4 +52,4 @@ fromString :: [Char] -> CharSet
 fromString = CharSet . RSet.fromList
 
 fromPred :: (Char -> Bool) -> CharSet
-fromPred f = CharSet . RSet.fromList . filter f $ [minBound .. maxBound]
+fromPred f = CharSet . RSet.fromAscList . filter f $ [minBound .. maxBound]

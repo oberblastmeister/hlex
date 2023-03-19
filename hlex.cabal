@@ -79,7 +79,6 @@ library
       Text.HLex.Internal.CharSet
       Text.HLex.Internal.Utils
       Text.HLex.Internal.Dfa
-        Text.HLex.Internal.Dfa.Simulate
       Text.HLex.Internal.Nfa
       Text.HLex.Internal.RegexToNfa
       Text.HLex.Internal.NfaToDfa
@@ -112,6 +111,7 @@ test-suite hlex-test
   main-is: Main.hs
   other-modules:
     MinimizeTest
+    RegexTest
   build-depends:
     hlex,
     tasty,

@@ -5,7 +5,8 @@ import Text.HLex.Internal.CharSet (CharSet)
 import Text.HLex.Internal.CharSet qualified as CharSet
 
 data Regex
-  = Set CharSet
+  = Empty
+  | Set CharSet
   | Rep Regex
   | Cat Regex Regex
   | Alt Regex Regex
@@ -17,8 +18,15 @@ instance Semigroup Regex where
 instance Monoid Regex where
   mempty = empty
 
+isEmpty :: Regex -> Bool
+isEmpty Empty = True
+isEmpty (Set _) = False
+isEmpty (Rep r) = isEmpty r
+isEmpty (Cat r1 r2) = isEmpty r1 && isEmpty r2
+isEmpty (Alt r1 r2) = isEmpty r1 && isEmpty r2
+
 empty :: Regex
-empty = Set CharSet.empty
+empty = Empty
 
 set :: CharSet -> Regex
 set = Set
