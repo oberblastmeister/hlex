@@ -8,6 +8,8 @@ module Text.HLex.Internal.CharSet
     intersection,
     toList,
     toRangeList,
+    fromString,
+    fromPred,
   )
 where
 
@@ -40,3 +42,9 @@ toList = RSet.toList . unCharSet
 
 toRangeList :: CharSet -> [(Char, Char)]
 toRangeList = RSet.toRangeList . unCharSet
+
+fromString :: [Char] -> CharSet
+fromString = CharSet . RSet.fromList
+
+fromPred :: (Char -> Bool) -> CharSet
+fromPred f = CharSet . RSet.fromList . filter f $ [minBound .. maxBound]

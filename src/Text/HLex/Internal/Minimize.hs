@@ -41,7 +41,10 @@ import Text.HLex.Internal.Dfa qualified as Dfa
 --      end;
 -- end;
 minimize :: Dfa a -> Dfa a
-minimize dfa = Dfa.normalize dfa'
+minimize = Dfa.normalize . minimize'
+
+minimize' :: Dfa a -> Dfa.Dfa' (HashMap Int) Int a
+minimize' dfa = dfa'
   where
     dfa' =
       Dfa.toAssocList dfa
@@ -53,7 +56,7 @@ minimize dfa = Dfa.normalize dfa'
 
     equivMap :: HashMap Int Int
     equivMap =
-      fromList
+      HashMap.fromList
         [ (s, rep)
           | states <- equivalent,
             let rep = headSet states,

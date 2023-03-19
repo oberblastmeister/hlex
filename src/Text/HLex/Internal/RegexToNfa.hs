@@ -21,7 +21,7 @@ import Text.HLex.Internal.Lexer (Lexer (Lexer))
 import Text.HLex.Internal.Lexer qualified as Lexer
 import Text.HLex.Internal.Nfa (Nfa (Nfa))
 import Text.HLex.Internal.Nfa qualified as Nfa
-import Text.HLex.Internal.Regex as RE
+import Text.HLex.Internal.Regex qualified as RE
 import Text.HLex.Internal.Utils
 
 data NfaBuilder a = NfaBuilder
@@ -34,7 +34,7 @@ type MonadNfa a = MonadState (NfaBuilder a)
 lexerToNfa :: Lexer a -> Nfa (Lexer.Accept a)
 lexerToNfa lexer =
   Nfa
-    { Nfa.starts = [start],
+    { Nfa.start,
       Nfa.states = VB.fromListN (PVec.length nfa) (PVec.toList nfa)
     }
   where
@@ -57,7 +57,6 @@ ruleToNfa Lexer.Rule {Lexer.regex, Lexer.accept} = do
 
 regexToNfa :: MonadNfa a m => Int -> Int -> RE.Regex -> m ()
 regexToNfa from to = \case
-  RE.Empty -> emptyEdge from to
   RE.Cat r1 r2 -> do
     s <- freshState
     regexToNfa from s r1

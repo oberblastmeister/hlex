@@ -37,7 +37,7 @@ type Pdfa = Dfa' (HashMap StateSet) StateSet
 type Dfa = Dfa' PVec.Vector Int
 
 data Dfa' f s a = Dfa
-  { starts :: [s],
+  { start :: s,
     states :: !(f (State s a))
   }
 
@@ -49,9 +49,9 @@ instance Show a => Show (Dfa a) where
 -- deriving instance (Show s, Show (f (State s a))) => Show (Dfa' f s a)
 
 instance Functor f => Bifunctor (Dfa' f) where
-  bimap f g Dfa {starts, states} =
+  bimap f g Dfa {start, states} =
     Dfa
-      { starts = fmap f starts,
+      { start = f start,
         states = fmap (bimap f g) states
       }
 
@@ -101,7 +101,7 @@ transform :: (forall a. f a -> g a) -> Dfa' f s a -> Dfa' g s a
 transform f dfa@Dfa {states} = dfa {states = f states}
 
 normalize :: forall s a. Hashable s => Dfa' (HashMap s) s a -> Dfa a
-normalize Dfa {states, starts} = Dfa {states = states', starts = starts'}
+normalize Dfa {states, start} = Dfa {states = states', start = start'}
   where
     states' =
       PVec.fromList
@@ -110,7 +110,7 @@ normalize Dfa {states, starts} = Dfa {states = states', starts = starts'}
             let s = fromJust $ HashMap.lookup ns states
         ]
 
-    starts' = getState <$> starts
+    start' = getState start
 
     convertState :: State s a -> State Int a
     convertState state@State {transitions} = state {transitions = getState <$> transitions}
@@ -120,5 +120,4 @@ normalize Dfa {states, starts} = Dfa {states = states', starts = starts'}
 
     stateList = zip (HashMap.keys states) [0 :: Int ..]
 
-    stateMap :: HashMap s Int
     stateMap = fromList stateList

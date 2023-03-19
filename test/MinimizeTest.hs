@@ -16,10 +16,10 @@ tests =
   testGroup
     "Minimize"
     [ testCase "smoke" $ do
-        let dfa :: Dfa String =
+        let dfa =
               normalize $
                 Dfa
-                  { starts = [0 :: Int],
+                  { start = (0 :: Int),
                     states =
                       HashMap.fromList
                         [ (0, newState' 1 1),
@@ -28,7 +28,7 @@ tests =
                           (3, newState' 4 5),
                           (4, newState' 6 6),
                           (5, newState' 6 6),
-                          (6, State mempty (Just "second"))
+                          (6, State mempty (Just ()))
                         ]
                   }
             equiv = Minimize.dfaEquivalentStates dfa

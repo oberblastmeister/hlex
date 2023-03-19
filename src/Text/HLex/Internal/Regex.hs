@@ -5,8 +5,7 @@ import Text.HLex.Internal.CharSet (CharSet)
 import Text.HLex.Internal.CharSet qualified as CharSet
 
 data Regex
-  = Empty
-  | Set CharSet
+  = Set CharSet
   | Rep Regex
   | Cat Regex Regex
   | Alt Regex Regex
@@ -19,13 +18,19 @@ instance Monoid Regex where
   mempty = empty
 
 empty :: Regex
-empty = Empty
+empty = Set CharSet.empty
+
+set :: CharSet -> Regex
+set = Set
+
+when :: (Char -> Bool) -> Regex
+when = Set . CharSet.fromPred
 
 string :: String -> Regex
 string = foldMap (Set . CharSet.singleton)
 
 optional :: Regex -> Regex
-optional = Alt Empty
+optional = Alt empty
 
 many :: Regex -> Regex
 many = Rep

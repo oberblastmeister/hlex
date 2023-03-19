@@ -4,7 +4,6 @@ module Text.HLex.Internal.Nfa
     ByteSet,
     StateId,
     StateSet,
-    newNfa,
     defState,
     closure,
   )
@@ -23,7 +22,7 @@ type StateId = Int
 type StateSet = IntSet
 
 data Nfa a = Nfa
-  { starts :: [StateId],
+  { start :: !StateId,
     states :: !(VB.Vector (State a))
   }
 
@@ -33,14 +32,11 @@ data State a = State
     accept :: Maybe a
   }
 
-newNfa :: Nfa a
-newNfa = Nfa {starts = mempty, states = mempty}
-
 defState :: State a
 defState = State {transitions = mempty, emptyTransitions = mempty, accept = Nothing}
 
 closure :: StateSet -> Nfa a -> StateSet
-closure starts nfa = go starts $ toList starts
+closure start nfa = go start $ toList start
   where
     go set [] = set
     go set (s : ss) = go set' ss'
