@@ -27,21 +27,23 @@ genFromInterval i = Gen.enum (I.inf i) (I.sup i)
 
 prop_never_accepts_surrogate_codepoints :: Property
 prop_never_accepts_surrogate_codepoints = property do
-  i <- forAll $ genInterval $ Char.ord <$> Gen.unicodeAll
-  let sequences = utf8Sequences i
+  cp <- forAll $ genInterval $ Char.ord <$> Gen.unicodeAll
+  let sequences = utf8Sequences cp
   for_ [0xd800 :: Int .. 0xdfff] \cp -> do
     let !bs = Maybe.fromJust $ encodeSurrogate cp
     assert $ not $ any (`matchUtf8Sequence` bs) sequences
 
 prop_single_codepoint_one_sequence :: Property
 prop_single_codepoint_one_sequence = property do
-  c <- forAll $ Gen.filter (`I.notMember` surrogateRange) $ Char.ord <$> Gen.unicodeAll
-  let sequences = utf8Sequences $ I.singleton c
+  cp <- forAll $ Gen.filter (`I.notMember` surrogateRange) $ Char.ord <$> Gen.unicodeAll
+  let sequences = utf8Sequences $ I.singleton cp
   length sequences === 1
 
--- prop_no_sequence_for_surrogate_codepoints :: Property
--- prop_no_sequence_for_surrogate_codepoints = property do
--- c <-
+prop_no_sequence_for_surrogate_codepoints :: Property
+prop_no_sequence_for_surrogate_codepoints = property do
+  cp <- forAll $ genInterval $ genFromInterval surrogateRange
+  let sequences = utf8Sequences cp
+  length sequences === 0
 
 encodeSurrogate :: Int -> Maybe [Word8]
 encodeSurrogate cp
