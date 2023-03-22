@@ -13,10 +13,12 @@ import Data.IntMap (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
 import Data.IntSet qualified as IntSet
+import Data.List qualified as List
 import Data.Maybe (fromJust)
+import Data.Vector qualified as VB
 import GHC.Exts (fromList, toList)
 import Text.HLex.Internal.AssocList qualified as AssocList
-import Text.HLex.Internal.Dfa (Dfa)
+import Text.HLex.Internal.Dfa (Dfa, Dfa' (Dfa))
 import Text.HLex.Internal.Dfa qualified as Dfa
 
 -- % Hopcroft's Algorithm for DFA minimization (cut/pasted from Wikipedia): % X refines Y into Y1 and Y2 means
@@ -146,3 +148,27 @@ takeSet :: Hashable a => HashSet a -> Maybe (a, HashSet a)
 takeSet set = case toList set of
   [] -> Nothing
   x : _ -> Just (x, HashSet.delete x set)
+
+validEquivs :: [Dfa.StateSet] -> Bool
+validEquivs equivs = equivs == List.nub equivs
+
+-- might not be correct
+isMinimal :: [Dfa.StateSet] -> Dfa a -> Bool
+isMinimal equivStates Dfa {states} =
+  validEquivs equivStates && flip all equivStates \equiv -> do
+    let allTransitions =
+          foldMap'
+            id
+            [ pure @[] . fromJust . (`HashMap.lookup` equivMap) <$> transitions
+              | s <- IntSet.toList equiv,
+                let state = states VB.! s,
+                let transitions = Dfa.transitions state
+            ]
+    flip all allTransitions \equivs -> length (List.nub equivs) == 1
+  where
+    equivMap =
+      HashMap.fromList
+        [ (s, equiv)
+          | equiv <- equivStates,
+            s <- IntSet.toList equiv
+        ]

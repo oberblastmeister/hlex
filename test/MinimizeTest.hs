@@ -1,4 +1,4 @@
-module MinimizeTest where
+module MinimizeTest (tests) where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
@@ -19,7 +19,7 @@ tests =
         let dfa =
               normalize $
                 Dfa
-                  { start = (0 :: Int),
+                  { start = 0 :: Int,
                     states =
                       HashMap.fromList
                         [ (0, newState' 1 1),

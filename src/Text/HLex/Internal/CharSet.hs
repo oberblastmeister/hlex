@@ -11,9 +11,12 @@ module Text.HLex.Internal.CharSet
     fromString,
     fromPred,
     null,
+    singletonRange,
+    (\\),
   )
 where
 
+import Data.Char qualified as Char
 import Data.RangeSet.List (RSet)
 import Data.RangeSet.List qualified as RSet
 import Prelude hiding (null)
@@ -30,6 +33,9 @@ null = RSet.null . unCharSet
 singleton :: Char -> CharSet
 singleton = CharSet . RSet.singleton
 
+singletonRange :: (Char, Char) -> CharSet
+singletonRange = CharSet . RSet.singletonRange
+
 insert :: Char -> CharSet -> CharSet
 insert x (CharSet y) = CharSet $ RSet.insert x y
 
@@ -42,6 +48,9 @@ difference (CharSet x) (CharSet y) = CharSet $ RSet.difference x y
 intersection :: CharSet -> CharSet -> CharSet
 intersection (CharSet x) (CharSet y) = CharSet $ RSet.intersection x y
 
+(\\) :: CharSet -> CharSet -> CharSet
+(\\) = difference
+
 toList :: CharSet -> [Char]
 toList = RSet.toList . unCharSet
 
@@ -52,4 +61,4 @@ fromString :: [Char] -> CharSet
 fromString = CharSet . RSet.fromList
 
 fromPred :: (Char -> Bool) -> CharSet
-fromPred f = CharSet . RSet.fromAscList . filter f $ [minBound .. maxBound]
+fromPred f = CharSet . RSet.fromAscList . filter f $ [Char.chr 0x0 .. Char.chr 0x10ffff]

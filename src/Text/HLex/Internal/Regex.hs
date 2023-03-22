@@ -1,5 +1,6 @@
 module Text.HLex.Internal.Regex where
 
+import Data.Char qualified as Char
 import Data.Foldable (fold)
 import Text.HLex.Internal.CharSet (CharSet)
 import Text.HLex.Internal.CharSet qualified as CharSet
@@ -31,6 +32,9 @@ empty = Empty
 set :: CharSet -> Regex
 set = Set
 
+range :: (Char, Char) -> Regex
+range = Set . CharSet.singletonRange
+
 when :: (Char -> Bool) -> Regex
 when = Set . CharSet.fromPred
 
@@ -51,3 +55,12 @@ exactly n r = fold $ replicate n r
 
 atLeast :: Int -> Regex -> Regex
 atLeast n r = exactly n r <> many r
+
+dot :: Regex
+dot = range (Char.chr 0x0, Char.chr 0x10ffff)
+
+alpha :: Regex
+alpha = set $ CharSet.singletonRange ('a', 'z') <> CharSet.singletonRange ('A', 'Z')
+
+num :: Regex
+num = range ('0', '9')

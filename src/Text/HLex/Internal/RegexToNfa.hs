@@ -24,7 +24,6 @@ import Text.HLex.Internal.Nfa (Nfa (Nfa))
 import Text.HLex.Internal.Nfa qualified as Nfa
 import Text.HLex.Internal.Regex qualified as RE
 import Text.HLex.Internal.Utils
-import Debug.Trace
 
 data NfaBuilder a = NfaBuilder
   { nfa :: !(PVec.Vector (Nfa.State a)),
@@ -133,16 +132,31 @@ utf8RangeEdge from to (x : xs, y : ys)
       do
         s <- freshState
         byteSetEdge from s $ RSet.singleton x
-        utf8RangeEdge s to (xs, 0xff <$ xs)
+        -- this is definately wrong, 0xff may not be valid utf8
+        utf8RangeEdge s to (xs, 0xff <$ ys)
       do
         s <- freshState
         byteSetEdge from s $ RSet.singleton y
-        utf8RangeEdge s to (0x00 <$ ys, ys)
+        utf8RangeEdge s to (0x00 <$ xs, ys)
       when (x + 1 <= y - 1) do
         s <- freshState
         byteSetEdge from s $ RSet.singletonRange (x + 1, y - 1)
         anyBytesEdge s to $ length xs
 utf8RangeEdge _ _ _ = error "utf8RangeEdge: invalid utf8 range"
+
+-- utf8RangeToBytesRanges :: ([Byte], [Byte]) -> [[(Byte, Byte)]]
+-- utf8RangeToBytesRanges ([], []) = []
+-- utf8RangeToBytesRanges ([x], [y]) = [[(x, y)]]
+-- utf8RangeToBytesRanges (x : xs, y : ys)
+--   | x == y = [(x, x)] : utf8RangeToBytesRanges (xs, ys)
+--   | x < y = (x, 0xff) : (0x00, y) : utf8RangeToBytesRanges (xs, ys)
+--   | otherwise = error "utf8RangeToBytesRanges: invalid utf8 range"
+-- utf8RangeToBytesRanges ([], []) = []
+-- utf8RangeToBytesRanges ([x], [y]) = [(x, y)]
+-- utf8RangeToBytesRanges (x : xs, y : ys)
+--   | x == y = 
+--   | x < y = (x, 0xff) : (0x00, y) : utf8RangeToBytesRanges (xs, ys)
+--   | otherwise = error "utf8RangeToBytesRanges: invalid utf8 range"
 
 anyBytesEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> Int -> m ()
 anyBytesEdge from to n = do

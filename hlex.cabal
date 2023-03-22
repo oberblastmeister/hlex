@@ -69,6 +69,7 @@ common common-options
     primitive,
     vector,
     range-set-list,
+    intervals,
     megaparsec,
 
 library
@@ -77,6 +78,7 @@ library
   exposed-modules:
     Text.HLex
       Text.HLex.Internal.CharSet
+      Text.HLex.Internal.Utf8Range
       Text.HLex.Internal.Utils
       Text.HLex.Internal.Dfa
       Text.HLex.Internal.Nfa
@@ -112,6 +114,7 @@ test-suite hlex-test
   other-modules:
     MinimizeTest
     RegexTest
+    Utf8RangeTest
   build-depends:
     hlex,
     tasty,
