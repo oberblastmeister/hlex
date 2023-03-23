@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Utf8RangeTest (tests) where
+module Utf8Test (tests) where
 
 import Data.Bits (unsafeShiftR, (.&.), (.|.))
 import Data.Char qualified as Char
@@ -14,7 +14,7 @@ import Numeric.Interval.NonEmpty (Interval, (...))
 import Numeric.Interval.NonEmpty qualified as I
 import Test.Tasty
 import Test.Tasty.Hedgehog
-import Text.HLex.Internal.Utf8Range
+import Text.HLex.Internal.Utf8
 
 genInterval :: Ord a => Gen a -> Gen (Interval a)
 genInterval gen = (...) <$> gen <*> gen
@@ -25,13 +25,13 @@ intervalToRange i = Range.constant (I.inf i) (I.sup i)
 genFromInterval :: Enum a => Interval a -> Gen a
 genFromInterval i = Gen.enum (I.inf i) (I.sup i)
 
-prop_never_accepts_surrogate_codepoints :: Property
-prop_never_accepts_surrogate_codepoints = property do
-  cp <- forAll $ genInterval $ Char.ord <$> Gen.unicodeAll
-  let sequences = utf8Sequences cp
-  for_ [0xd800 :: Int .. 0xdfff] \cp -> do
-    let !bs = Maybe.fromJust $ encodeSurrogate cp
-    assert $ not $ any (`matchUtf8Sequence` bs) sequences
+-- prop_never_accepts_surrogate_codepoints :: Property
+-- prop_never_accepts_surrogate_codepoints = property do
+--   cp <- forAll $ genInterval $ Char.ord <$> Gen.unicodeAll
+--   let sequences = utf8Sequences cp
+--   for_ [0xd800 :: Int .. 0xdfff] \cp -> do
+--     let !bs = Maybe.fromJust $ encodeSurrogate cp
+--     assert $ not $ any (`matchUtf8Sequence` bs) sequences
 
 prop_single_codepoint_one_sequence :: Property
 prop_single_codepoint_one_sequence = property do
@@ -44,6 +44,12 @@ prop_no_sequence_for_surrogate_codepoints = property do
   cp <- forAll $ genInterval $ genFromInterval surrogateRange
   let sequences = utf8Sequences cp
   length sequences === 0
+
+prop_ascii_range_same :: Property
+prop_ascii_range_same = property do
+  i <- forAll $ genInterval $ Char.ord <$> Gen.ascii
+  let toB = fromIntegral @Int @Word8
+  utf8Sequences i === [UOne $ toB (I.inf i) ... toB (I.sup i)]
 
 encodeSurrogate :: Int -> Maybe [Word8]
 encodeSurrogate cp

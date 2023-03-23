@@ -1,5 +1,5 @@
 module Text.HLex.Internal.CharSet
-  ( CharSet,
+  ( CharSet(..),
     empty,
     singleton,
     insert,
@@ -61,4 +61,4 @@ fromString :: [Char] -> CharSet
 fromString = CharSet . RSet.fromList
 
 fromPred :: (Char -> Bool) -> CharSet
-fromPred f = CharSet . RSet.fromAscList . filter f $ [Char.chr 0x0 .. Char.chr 0x10ffff]
+fromPred f = CharSet . RSet.fromAscList . filter f $ [minBound .. maxBound]

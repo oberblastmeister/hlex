@@ -22,7 +22,7 @@ module Text.HLex.Internal.Dfa
 where
 
 import Control.Applicative ((<|>))
-import Data.Bifunctor (Bifunctor (bimap))
+import Data.Bifunctor (Bifunctor (bimap), first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as B
 import Data.HashMap.Strict (HashMap)
@@ -36,6 +36,7 @@ import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (fromList)
 import Text.HLex.Internal.AssocList (AssocList)
+import Debug.Trace
 
 -- dfa using sets of nfa states
 type Pdfa = Dfa' (HashMap StateSet) StateSet
@@ -65,7 +66,7 @@ data State s a = State
   { transitions :: !(IntMap s),
     accept :: Maybe a
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
 type PState = State StateSet
 

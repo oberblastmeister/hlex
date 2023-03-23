@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 
-module Text.HLex.Internal.Utf8Range where
+module Text.HLex.Internal.Utf8 where
 
 import Control.Applicative (asum)
 import Control.Monad ((<=<))
@@ -87,7 +87,7 @@ utf8Sequences =
     <=< splitSurrogate
 
 isAsciiRange :: ScalarRange -> Bool
-isAsciiRange i = I.sup i <= 0x7f
+isAsciiRange = (I.<=! 0x7f)
 
 encodeRange :: ScalarRange -> ([Word8], [Word8])
 encodeRange i = (e $ I.inf i, e $ I.sup i)
@@ -118,3 +118,6 @@ utf8Sequences' i
                       ++ utf8Sequences' (I.sup i .&. m' ... I.sup i)
               | otherwise -> Nothing
         else Just [i]
+
+toScalarRange :: Interval Char -> Interval Int
+toScalarRange i = Char.ord (I.inf i) ... Char.ord (I.sup i)

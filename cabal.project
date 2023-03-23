@@ -1,4 +1,5 @@
 packages:
     ./
+    ../pvector
 
 test-show-details: direct

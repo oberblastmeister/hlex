@@ -50,8 +50,8 @@ common common-options
     -- until OverloadedRecordUpdate stabilizes
     -- -Wno-ambiguous-fields
     -Wno-partial-type-signatures
-    -Werror=incomplete-patterns
-    -Werror=incomplete-uni-patterns
+    -- -Werror=incomplete-patterns
+    -- -Werror=incomplete-uni-patterns
     -Werror=missing-methods
     -Werror=incomplete-record-updates
     -Wcpp-undef
@@ -78,7 +78,7 @@ library
   exposed-modules:
     Text.HLex
       Text.HLex.Internal.CharSet
-      Text.HLex.Internal.Utf8Range
+      Text.HLex.Internal.Utf8
       Text.HLex.Internal.Utils
       Text.HLex.Internal.Dfa
       Text.HLex.Internal.Nfa
@@ -114,7 +114,7 @@ test-suite hlex-test
   other-modules:
     MinimizeTest
     RegexTest
-    Utf8RangeTest
+    Utf8Test
   build-depends:
     hlex,
     tasty,

@@ -1,6 +1,6 @@
 import MinimizeTest qualified
 import RegexTest qualified
-import Utf8RangeTest qualified
+import Utf8Test qualified
 import Test.Tasty
 
 main :: IO ()
@@ -9,7 +9,7 @@ main =
     testGroup
       "main"
       [
-        Utf8RangeTest.tests,
+        Utf8Test.tests,
         MinimizeTest.tests,
         RegexTest.tests
       ]

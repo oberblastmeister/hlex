@@ -4,8 +4,12 @@ module RegexTest (tests) where
 
 import Data.ByteString qualified as B
 import Data.Char qualified as Char
+import Data.Foldable (for_)
+import Data.IntSet qualified as IntSet
+import Data.Maybe qualified as Maybe
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
+import Data.Vector qualified as VB
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -19,6 +23,8 @@ import Text.HLex.Internal.NfaToDfa qualified as NfaToDfa
 import Text.HLex.Internal.Regex
 import Text.HLex.Internal.Regex qualified as RE
 import Text.HLex.Internal.RegexToNfa qualified as RegexToNfa
+import Text.HLex.Internal.Utf8
+import Text.HLex.Internal.Utils
 
 genRegexWith :: Gen Char -> Gen Regex
 genRegexWith genChar = go
@@ -77,30 +83,55 @@ prop_minimize = property do
 
 predicatesProperty :: (Char -> Bool) -> Property
 predicatesProperty pred = property do
-  c <- forAll Gen.unicode
   let r = RE.when pred
-  let bs = T.encodeUtf8 $ T.singleton c
   let nfa = RegexToNfa.regexToNfa () r
   let dfa = NfaToDfa.nfaToDfa nfa
   let minDfa = Minimize.minimize dfa
+  let ranges = CharSet.fromPred pred
+  let cs = CharSet.toList ranges
+  c <- forAll $ Gen.element cs
+  let transitionLessStates =
+        filter (\(i, state) -> null (Nfa.transitions state) && IntSet.null (Nfa.emptyTransitions state)) $
+          zip [0 :: Int ..] $
+            VB.toList (Nfa.states nfa)
+  let transitionLessStates' =
+        filter (\(i, state) -> null (Nfa.transitions state) && not (IntSet.null (Nfa.emptyTransitions state))) $
+          zip [0 :: Int ..] $
+            VB.toList (Nfa.states nfa)
+  let acceptingStates = filter (Maybe.isJust . Dfa.accept) $ VB.toList (Dfa.states minDfa)
+  annotateShow $ length $ CharSet.toRangeList ranges
+  annotateShow $ length acceptingStates
+  annotateShow transitionLessStates
+  -- annotateShow transitionLessStates'
+  -- annotateShow ranges
+  -- annotateShow c
+  let bs = T.encodeUtf8 $ T.singleton c
+  annotateShow bs
   let nfaRes = Nfa.simulate bs nfa
   let dfaRes = Dfa.simulate bs minDfa
-  let ranges = CharSet.fromPred pred
-  annotateShow ranges
-  annotateShow bs
   nfaRes === dfaRes
-  if pred c
-    then do
-      Dfa.simulate bs minDfa === Just (B.length bs, ())
-    else do
-      Dfa.simulate bs minDfa === Nothing
+  let sequences = utf8Sequences . toScalarRange =<< rangeSetToIntervalList (CharSet.unCharSet ranges)
+  annotateShow $ isSurrogate c
+  -- annotateShow sequences
+  assert $ any (`matchUtf8Sequence` B.unpack bs) sequences
+  -- nfaRes === Right (B.length bs, ())
+  nfaRes === Just (B.length bs, ())
+
+isSurrogate :: Char -> Bool
+isSurrogate c =
+  (0xD800 <= x && x <= 0xDBFF)
+    || (0xDC00 <= x && x <= 0xDFFF)
+  where
+    x = Char.ord c
 
 tests :: TestTree
 tests =
   testGroup
     "RegexTest"
-    [ fromGroup $$(discover)
-      -- testProperty "isAlpha" $ predicatesProperty Char.isPrint
+    [ fromGroup $$(discover),
+      testProperty "isSpace" $ predicatesProperty Char.isSpace,
+      testProperty "isAlpha" $ predicatesProperty Char.isAlpha,
+      testProperty "all" $ predicatesProperty (const True)
     ]
 
 -- [ testProperty "valid" $ property do

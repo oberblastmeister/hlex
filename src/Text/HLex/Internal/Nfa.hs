@@ -16,6 +16,7 @@ module Text.HLex.Internal.Nfa
 where
 
 import Control.Applicative ((<|>))
+import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as B
 import Data.Foldable (foldl')
@@ -27,10 +28,12 @@ import Data.IntSet (IntSet)
 import Data.IntSet qualified as IntSet
 import Data.List qualified as List
 import Data.List.NonEmpty qualified as NE
-import Data.RangeSet.List qualified as RSet
 import Data.Vector qualified as VB
 import Data.Word (Word8)
+import Debug.Trace (traceId)
 import GHC.Exts (toList)
+import Numeric.Interval.NonEmpty qualified as I
+import Text.HLex.Internal.Utf8 (Utf8Range)
 import Text.HLex.Internal.Utils
 
 type StateId = Int
@@ -44,7 +47,7 @@ data Nfa a = Nfa
   deriving (Show, Eq)
 
 data State a = State
-  { transitions :: [(ByteSet, StateId)],
+  { transitions :: [(Utf8Range, StateId)],
     emptyTransitions :: !IntSet,
     accept :: Maybe a
   }
@@ -86,8 +89,8 @@ transitionMap ss nfa =
 individualTransitions :: StateId -> Nfa a -> [(Int, StateId)]
 individualTransitions from nfa =
   [ (fromIntegral @_ @Int byte, to)
-    | (byteSet, to) <- nfa & states & (VB.! from) & transitions,
-      byte <- RSet.toList byteSet
+    | (utf8Range, to) <- nfa & states & (VB.! from) & transitions,
+      byte <- [I.inf utf8Range .. I.sup utf8Range]
   ]
 
 closure :: StateSet -> Nfa a -> StateSet
@@ -112,12 +115,11 @@ simulate bs nfa@Nfa {start, states} = go (closure (IntSet.singleton start) nfa) 
   where
     go ss i lastMatch = case B.indexMaybe bs i of
       Nothing -> result
-      Just b -> case IntMap.lookup
-        (fromIntegral @Word8 @Int b)
-        (transitionMapClosure ss Nfa {start, states}) of
+      Just b -> case IntMap.lookup (fromIntegral @Word8 @Int b) map of
         Just ss -> go ss (i + 1) newMatch
         Nothing -> result
       where
+        map = transitionMapClosure ss Nfa {start, states}
         accept = chooseAccept ss nfa
         newMatch = accept <|> lastMatch
         result = (i,) <$> newMatch
