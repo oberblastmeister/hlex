@@ -115,20 +115,20 @@ utf8SequenceEdge from to sequence = do
     foldlM
       ( \from utf8Range -> do
           s <- freshState
-          let !_ = traceId $ "s: " ++ show s
+          -- let !_ = traceId $ "s: " ++ show s
           utf8RangeEdge from s utf8Range
           pure s
       )
       from
       (Foldable.toList sequence)
-  let !_ = traceId $ "from: " ++ show from
+  -- let !_ = traceId $ "from: " ++ show from
   emptyEdge from to
 
 utf8RangeEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> Utf8Range -> m ()
 utf8RangeEdge from to utf8Range = do
-  let !_ = traceId $ "utf8RangeEdge: " ++ show (from, to, utf8Range)
+  -- let !_ = traceId $ "utf8RangeEdge: " ++ show (from, to, utf8Range)
   State.modify' $ \builder@NfaBuilder {nfa} -> do
-    let !_ = traceId $ "len: " ++ show (length nfa)
+    -- let !_ = traceId $ "len: " ++ show (length nfa)
     builder
       { nfa =
           PVec.adjust
