@@ -22,7 +22,7 @@ module Text.HLex.Internal.Dfa
 where
 
 import Control.Applicative ((<|>))
-import Data.Bifunctor (Bifunctor (bimap), first)
+import Data.Bifunctor (Bifunctor (bimap))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as B
 import Data.HashMap.Strict (HashMap)
@@ -32,11 +32,11 @@ import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Data.IntSet (IntSet)
 import Data.Maybe (fromJust)
+import Data.Maybe qualified as Maybe
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (fromList)
 import Text.HLex.Internal.AssocList (AssocList)
-import Debug.Trace
 
 -- dfa using sets of nfa states
 type Pdfa = Dfa' (HashMap StateSet) StateSet
@@ -82,8 +82,10 @@ instance Bifunctor State where
 valid :: Dfa a -> Bool
 valid Dfa {start, states} = validStateId start && all validState states
   where
-    validState State {transitions} =
-      all validTransition (IntMap.toList transitions)
+    validState State {transitions, accept} =
+      all validTransition (IntMap.toList transitions) && notDeadState
+      where
+        notDeadState = Maybe.isJust accept || not (IntMap.null transitions)
     validTransition (_, to) = validStateId to
     validStateId s = s >= 0 && s < VB.length states
 

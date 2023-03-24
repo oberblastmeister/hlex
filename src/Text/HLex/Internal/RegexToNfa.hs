@@ -12,7 +12,6 @@ import Data.Foldable qualified as Foldable
 import Data.IntSet qualified as IntSet
 import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
-import Debug.Trace
 import Numeric.Interval.NonEmpty ((...))
 import Text.HLex.Internal.CharSet (CharSet)
 import Text.HLex.Internal.CharSet qualified as CharSet
@@ -75,7 +74,11 @@ regexToNfa' from to = \case
   RE.Alt r1 r2 -> do
     regexToNfa' from to r1
     regexToNfa' from to r2
-  RE.Set set -> charSetEdge from to set
+  RE.Set set ->
+    -- prevent dead states, empty charset is an epsilon transition
+    if CharSet.null set
+      then emptyEdge from to
+      else charSetEdge from to set
   RE.Rep r -> do
     s <- freshState
     emptyEdge from s

@@ -16,7 +16,6 @@ module Text.HLex.Internal.Nfa
 where
 
 import Control.Applicative ((<|>))
-import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as B
 import Data.Foldable (foldl')
@@ -28,9 +27,9 @@ import Data.IntSet (IntSet)
 import Data.IntSet qualified as IntSet
 import Data.List qualified as List
 import Data.List.NonEmpty qualified as NE
+import Data.Maybe qualified as Maybe
 import Data.Vector qualified as VB
 import Data.Word (Word8)
-import Debug.Trace (traceId)
 import GHC.Exts (toList)
 import Numeric.Interval.NonEmpty qualified as I
 import Text.HLex.Internal.Utf8 (Utf8Range)
@@ -59,8 +58,14 @@ defState = State {transitions = mempty, emptyTransitions = mempty, accept = Noth
 valid :: Nfa a -> Bool
 valid Nfa {start, states} = validStateId start && all validState (VB.toList states)
   where
-    validState State {transitions, emptyTransitions} =
-      all validTransition transitions && all validStateId (IntSet.toList emptyTransitions)
+    validState State {transitions, emptyTransitions, accept} =
+      all validTransition transitions
+        && all validStateId (IntSet.toList emptyTransitions)
+        && notDeadState
+      where
+        notDeadState =
+          Maybe.isJust accept
+            || (not (null transitions) || not (IntSet.null emptyTransitions))
     validTransition (_, to) = validStateId to
     validStateId s = s >= 0 && s < VB.length states
 

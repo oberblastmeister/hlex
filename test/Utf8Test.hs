@@ -4,8 +4,6 @@ module Utf8Test (tests) where
 
 import Data.Bits (unsafeShiftR, (.&.), (.|.))
 import Data.Char qualified as Char
-import Data.Foldable (for_)
-import Data.Maybe qualified as Maybe
 import Data.Word (Word8)
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
