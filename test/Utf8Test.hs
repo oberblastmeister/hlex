@@ -58,7 +58,7 @@ prop_scalar_ranges_valid = property do
 tests :: TestTree
 tests =
   testGroup
-    "Utf8RangeTest"
+    "Utf8Test"
     [ fromGroup $$(discover),
       testGroup "neverAcceptsSurrogateCodepoints" do
         [ HU.testCase (show i) $ neverAcceptsSurrogateCodepoints i

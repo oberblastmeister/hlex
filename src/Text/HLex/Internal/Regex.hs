@@ -2,29 +2,69 @@ module Text.HLex.Internal.Regex where
 
 import Data.Char qualified as Char
 import Data.Foldable (fold)
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NE
 import Text.HLex.Internal.CharSet (CharSet)
 import Text.HLex.Internal.CharSet qualified as CharSet
+import Prelude hiding (null)
 
 data Regex
-  = Empty
-  | Set CharSet
+  = Set CharSet
   | Rep Regex
-  | Cat Regex Regex
-  | Alt Regex Regex
-  deriving (Show, Eq)
+  | Cat [Regex]
+  | Alt (NonEmpty Regex)
+  deriving (Show, Eq, Ord)
 
 instance Semigroup Regex where
-  (<>) = Cat
+  r <> r' = cat [r, r']
 
 instance Monoid Regex where
   mempty = empty
 
+pattern Null :: Regex
+pattern Null <- (isNull -> True)
+  where
+    Null = Set CharSet.empty
+
+null :: Regex
+null = Null
+
+isNull :: Regex -> Bool
+isNull (Set (CharSet.null -> True)) = True
+isNull _ = False
+
+alt :: [Regex] -> Regex
+alt rs = case rs' of
+  [r] -> r
+  rs -> maybe null Alt $ NE.nonEmpty rs
+  where
+    rs' = concatMap f rs
+    f (Alt rs) = NE.toList rs
+    f Null = []
+    f r = [r]
+
+cat :: [Regex] -> Regex
+cat rs
+  | null `elem` rs = null
+  | otherwise = case rs' of
+      [r] -> r
+      rs -> Cat rs
+  where
+    rs' = concatMap f rs
+    f (Cat rs) = rs
+    f r = [r]
+
 isEmpty :: Regex -> Bool
-isEmpty Empty = True
+isEmpty (Cat []) = True
+isEmpty (Cat rs) = any isEmpty rs
 isEmpty (Set _) = False
 isEmpty (Rep r) = isEmpty r
-isEmpty (Cat r1 r2) = isEmpty r1 && isEmpty r2
-isEmpty (Alt r1 r2) = isEmpty r1 && isEmpty r2
+isEmpty (Alt rs) = any isEmpty rs
+
+pattern Empty :: Regex
+pattern Empty <- (isEmpty -> True)
+  where
+    Empty = Cat []
 
 empty :: Regex
 empty = Empty
@@ -42,7 +82,7 @@ string :: String -> Regex
 string = foldMap (Set . CharSet.singleton)
 
 optional :: Regex -> Regex
-optional = Alt empty
+optional r = alt [r, empty]
 
 many :: Regex -> Regex
 many = Rep

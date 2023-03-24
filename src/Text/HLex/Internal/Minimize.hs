@@ -155,7 +155,7 @@ validEquivs equivs = equivs == List.nub equivs
 -- might not be correct
 isMinimal :: [Dfa.StateSet] -> Dfa a -> Bool
 isMinimal equivStates Dfa {states} =
-  validEquivs equivStates && flip all equivStates \equiv -> do
+  correctSize && validEquivs equivStates && flip all equivStates \equiv -> do
     let allTransitions =
           foldMap'
             id
@@ -166,6 +166,7 @@ isMinimal equivStates Dfa {states} =
             ]
     flip all allTransitions \equivs -> length (List.nub equivs) == 1
   where
+    correctSize = IntSet.size (IntSet.unions equivStates) == VB.length states
     equivMap =
       HashMap.fromList
         [ (s, equiv)

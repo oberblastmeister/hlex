@@ -10,6 +10,7 @@ import Data.Char qualified as Char
 import Data.Foldable (foldlM, for_)
 import Data.Foldable qualified as Foldable
 import Data.IntSet qualified as IntSet
+import Data.List.NonEmpty qualified as NE
 import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
 import Numeric.Interval.NonEmpty ((...))
@@ -66,20 +67,38 @@ regexToNfa accept regex = Nfa {Nfa.start, Nfa.states = VB.fromListN (PVec.length
 
 regexToNfa' :: MonadNfa a m => Int -> Int -> RE.Regex -> m ()
 regexToNfa' from to = \case
-  RE.Empty -> emptyEdge from to
-  RE.Cat r1 r2 -> do
-    s <- freshState
-    regexToNfa' from s r1
-    regexToNfa' s to r2
-  RE.Alt r1 r2 -> do
-    regexToNfa' from to r1
-    regexToNfa' from to r2
+  -- RE.Empty -> emptyEdge from to
+  RE.Cat rs -> catToNfa from to rs regexToNfa'
+  RE.Alt rs -> altToNfa from to (NE.toList rs) regexToNfa'
+  -- RE.Cat r1 r2 -> do
+  --   s <- freshState
+  --   regexToNfa' from s r1
+  --   regexToNfa' s to r2
+  -- RE.Alt r1 r2 -> do
+  --   regexToNfa' from to r1
+  --   regexToNfa' from to r2
   RE.Set set -> charSetEdge from to set
   RE.Rep r -> do
     s <- freshState
     emptyEdge from s
     regexToNfa' s s r
     emptyEdge s to
+
+catToNfa :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> [r] -> (Nfa.StateId -> Nfa.StateId -> r -> m ()) -> m ()
+catToNfa from to rs toNfa = do
+  from <-
+    foldlM
+      ( \from r -> do
+          s <- freshState
+          toNfa from s r
+          pure s
+      )
+      from
+      rs
+  emptyEdge from to
+
+altToNfa :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> [r] -> (Nfa.StateId -> Nfa.StateId -> r -> m ()) -> m ()
+altToNfa from to rs toNfa = for_ rs $ toNfa from to
 
 newNfaBuilder :: NfaBuilder a
 newNfaBuilder = NfaBuilder {nfa = mempty, next = 0}
@@ -88,21 +107,10 @@ charSetToUtf8Sequences :: CharSet -> [Utf8Sequence]
 charSetToUtf8Sequences = concatMap (utf8Sequences . uncurry (...) . both Char.ord) . CharSet.toRangeList
 
 charSetEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> CharSet -> m ()
-charSetEdge from to set = do
-  for_ (charSetToUtf8Sequences set) $ utf8SequenceEdge from to
+charSetEdge from to set = altToNfa from to (charSetToUtf8Sequences set) utf8SequenceEdge
 
 utf8SequenceEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> Utf8Sequence -> m ()
-utf8SequenceEdge from to sequence = do
-  from <-
-    foldlM
-      ( \from utf8Range -> do
-          s <- freshState
-          utf8RangeEdge from s utf8Range
-          pure s
-      )
-      from
-      (Foldable.toList sequence)
-  emptyEdge from to
+utf8SequenceEdge from to sequence = catToNfa from to (Foldable.toList sequence) utf8RangeEdge
 
 utf8RangeEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> Utf8Range -> m ()
 utf8RangeEdge from to utf8Range = do

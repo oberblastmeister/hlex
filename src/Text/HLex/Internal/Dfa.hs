@@ -32,7 +32,6 @@ import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Data.IntSet (IntSet)
 import Data.Maybe (fromJust)
-import Data.Maybe qualified as Maybe
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (fromList)
@@ -52,8 +51,6 @@ deriving instance (Show a, Show s) => Show (Dfa' (AssocList Int) s a)
 
 instance Show a => Show (Dfa a) where
   show = show . toAssocList
-
--- deriving instance (Show s, Show (f (State s a))) => Show (Dfa' f s a)
 
 instance Functor f => Bifunctor (Dfa' f) where
   bimap f g Dfa {start, states} =

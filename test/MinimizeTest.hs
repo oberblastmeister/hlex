@@ -33,8 +33,8 @@ tests =
                   }
             equiv = Minimize.dfaEquivalentStates dfa
             dfa' = Minimize.minimize dfa
-        print dfa
-        print equiv
+        -- print dfa
+        -- print equiv
         -- print dfa'
         pure ()
     ]

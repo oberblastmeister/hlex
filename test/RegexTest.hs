@@ -1,9 +1,13 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module RegexTest (tests) where
 
+import Control.Monad (replicateM)
 import Data.ByteString qualified as B
 import Data.Char qualified as Char
+import Data.IntSet qualified as IntSet
+import Data.List qualified as List
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Hedgehog
@@ -31,10 +35,20 @@ genRegexWith genChar = go
         [ pure Empty,
           Set . CharSet.fromString <$> Gen.list (Range.linear 0 10) genChar
         ]
-        [ Gen.subterm2 go go Cat,
-          Gen.subterm2 go go Alt,
+        [ Gen.subterm2 go go (<>),
+          Gen.subterm2 go go (\r r' -> alt [r, r']),
           Gen.subterm go Rep
         ]
+
+genAltRegex :: Int -> String -> Gen String -> Gen Regex
+genAltRegex i s genS = alt . fmap string <$> replicateM i ((++ s) <$> genS)
+
+genSuffixRegex :: Gen String -> Gen Regex
+genSuffixRegex genS = do
+  s <- genS
+  ss <- Gen.filter (\ss -> List.nub ss == ss) $ Gen.list (Range.linear 2 10) genS
+  s' <- genS
+  pure $ RE.cat [RE.alt (RE.string . (++ s) <$> ss), RE.string s']
 
 prop_match_string :: Property
 prop_match_string = property do
@@ -68,10 +82,16 @@ prop_valid = property do
 
 prop_minimize :: Property
 prop_minimize = property do
-  r <- forAll $ genRegexWith Gen.unicodeAll
+  -- cannot include surrogates, because those might turn into Null regexes
+  r <- forAll $ genSuffixRegex $ Gen.string (Range.linear 1 10) Gen.unicode
   let nfa = RegexToNfa.regexToNfa () r
   let dfa = NfaToDfa.nfaToDfa nfa
+  annotateShow nfa
+  annotateShow dfa
   let equivs = Minimize.dfaEquivalentStates dfa
+  let merged = sum $ map (\e -> if IntSet.size e > 1 then 1 :: Int else 0) equivs
+  annotateShow equivs
+  assert $ merged > 1
   assert $ Minimize.isMinimal equivs dfa
 
 predicatesProperty :: (Char -> Bool) -> Property
