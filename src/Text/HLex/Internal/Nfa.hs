@@ -58,14 +58,9 @@ defState = State {transitions = mempty, emptyTransitions = mempty, accept = Noth
 valid :: Nfa a -> Bool
 valid Nfa {start, states} = validStateId start && all validState (VB.toList states)
   where
-    validState State {transitions, emptyTransitions, accept} =
+    validState State {transitions, emptyTransitions} =
       all validTransition transitions
         && all validStateId (IntSet.toList emptyTransitions)
-        && notDeadState
-      where
-        notDeadState =
-          Maybe.isJust accept
-            || (not (null transitions) || not (IntSet.null emptyTransitions))
     validTransition (_, to) = validStateId to
     validStateId s = s >= 0 && s < VB.length states
 

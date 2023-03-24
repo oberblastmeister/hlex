@@ -82,10 +82,8 @@ instance Bifunctor State where
 valid :: Dfa a -> Bool
 valid Dfa {start, states} = validStateId start && all validState states
   where
-    validState State {transitions, accept} =
-      all validTransition (IntMap.toList transitions) && notDeadState
-      where
-        notDeadState = Maybe.isJust accept || not (IntMap.null transitions)
+    validState State {transitions} =
+      all validTransition (IntMap.toList transitions)
     validTransition (_, to) = validStateId to
     validStateId s = s >= 0 && s < VB.length states
 

@@ -58,7 +58,7 @@ prop_match_string = property do
 
 prop_valid :: Property
 prop_valid = property do
-  r <- forAll $ genRegexWith Gen.unicode
+  r <- forAll $ genRegexWith Gen.unicodeAll
   let nfa = RegexToNfa.regexToNfa () r
   assert $ Nfa.valid nfa
   let dfa = NfaToDfa.nfaToDfa nfa
@@ -68,7 +68,7 @@ prop_valid = property do
 
 prop_minimize :: Property
 prop_minimize = property do
-  r <- forAll $ genRegexWith Gen.unicode
+  r <- forAll $ genRegexWith Gen.unicodeAll
   let nfa = RegexToNfa.regexToNfa () r
   let dfa = NfaToDfa.nfaToDfa nfa
   let equivs = Minimize.dfaEquivalentStates dfa
@@ -76,14 +76,26 @@ prop_minimize = property do
 
 predicatesProperty :: (Char -> Bool) -> Property
 predicatesProperty pred = property do
-  c <- forAll $ Gen.element cs
-  let bs = T.encodeUtf8 $ T.singleton c
+  -- FIXME: can't do unicodeAll because T.singleton will convert the surrogate into the unicode replacement character
+  c <- forAll $ Gen.choice [Gen.element cs, Gen.unicodeAll]
+  annotateShow $ isSurrogate c
+  let bs = encodeCharUtf8WithInvalid c
+  annotateShow bs
+  annotateShow $ bs == encodeCharUtf8WithInvalid '\xfffd'
   let nfaRes = Nfa.simulate bs nfa
   let dfaRes = Dfa.simulate bs minDfa
+  assert $ Dfa.valid minDfa
   nfaRes === dfaRes
   let sequences = utf8Sequences . toScalarRange =<< rangeSetToIntervalList (CharSet.unCharSet ranges)
-  assert $ any (`matchUtf8Sequence` B.unpack bs) sequences
-  dfaRes === Just (B.length bs, ())
+  -- sometimes, the predicates may accept surrogates
+  -- however, we still will not accept them
+  if not (isSurrogate c) && pred c
+    then do
+      assert $ any (`matchUtf8Sequence` bs) sequences
+      dfaRes === Just (B.length bs, ())
+    else do
+      assert $ not $ any (`matchUtf8Sequence` bs) sequences
+      dfaRes === Nothing
   where
     r = RE.when pred
     nfa = RegexToNfa.regexToNfa () r
@@ -91,6 +103,13 @@ predicatesProperty pred = property do
     minDfa = Minimize.minimize dfa
     ranges = CharSet.fromPred pred
     cs = CharSet.toList ranges
+
+isSurrogate :: Char -> Bool
+isSurrogate c =
+  (0xD800 <= x && x <= 0xDBFF)
+    || (0xDC00 <= x && x <= 0xDFFF)
+  where
+    x = Char.ord c
 
 tests :: TestTree
 tests =

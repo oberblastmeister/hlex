@@ -2,8 +2,8 @@
 
 module Utf8Test (tests) where
 
-import Data.Bits (unsafeShiftR, (.&.), (.|.))
 import Data.Char qualified as Char
+import Data.Foldable (for_)
 import Data.Word (Word8)
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
@@ -11,6 +11,7 @@ import Hedgehog.Range qualified as Range
 import Numeric.Interval.NonEmpty (Interval, (...))
 import Numeric.Interval.NonEmpty qualified as I
 import Test.Tasty
+import Test.Tasty.HUnit qualified as HU
 import Test.Tasty.Hedgehog
 import Text.HLex.Internal.Utf8
 
@@ -23,13 +24,13 @@ intervalToRange i = Range.constant (I.inf i) (I.sup i)
 genFromInterval :: Enum a => Interval a -> Gen a
 genFromInterval i = Gen.enum (I.inf i) (I.sup i)
 
--- prop_never_accepts_surrogate_codepoints :: Property
--- prop_never_accepts_surrogate_codepoints = property do
---   cp <- forAll $ genInterval $ Char.ord <$> Gen.unicodeAll
---   let sequences = utf8Sequences cp
---   for_ [0xd800 :: Int .. 0xdfff] \cp -> do
---     let !bs = Maybe.fromJust $ encodeSurrogate cp
---     assert $ not $ any (`matchUtf8Sequence` bs) sequences
+neverAcceptsSurrogateCodepoints :: Interval Char -> IO ()
+neverAcceptsSurrogateCodepoints i = do
+  for_ [0xd800 :: Int .. 0xdfff] \cp -> do
+    let !bs = encodeScalarValueWithInvalid cp
+    HU.assertBool (show cp ++ " matched even though it was a surrogate") $ not $ any (`matchUtf8Sequence` bs) sequences
+  where
+    sequences = utf8Sequences $ toScalarRange i
 
 prop_single_codepoint_one_sequence :: Property
 prop_single_codepoint_one_sequence = property do
@@ -49,25 +50,26 @@ prop_ascii_range_same = property do
   let toB = fromIntegral @Int @Word8
   utf8Sequences i === [UOne $ toB (I.inf i) ... toB (I.sup i)]
 
-encodeSurrogate :: Int -> Maybe [Word8]
-encodeSurrogate cp
-  | cp < 0xd800 || cp > 0xdfff = Nothing
-  | otherwise =
-      Just
-        [ toB ((cp `unsafeShiftR` 12) .&. 0x0f) .|. tagThreeB,
-          toB ((cp `unsafeShiftR` 6) .&. 0x3f) .|. tagCont,
-          toB (cp .&. 0x3f) .|. tagCont
-        ]
-  where
-    toB = fromIntegral @Int @Word8
-    tagCont = 0b1000_0000
-    tagThreeB = 0b1110_0000
+prop_scalar_ranges_valid :: Property
+prop_scalar_ranges_valid = property do
+  i <- forAll $ toScalarRange <$> genInterval Gen.unicodeAll
+  assert $ all validScalarRange (utf8ScalarRanges i)
 
 tests :: TestTree
 tests =
   testGroup
     "Utf8RangeTest"
     [ fromGroup $$(discover),
+      testGroup "neverAcceptsSurrogateCodepoints" do
+        [ HU.testCase (show i) $ neverAcceptsSurrogateCodepoints i
+          | i <-
+              [ '\x0' ... '\xffff',
+                '\x0' ... '\x10ffff',
+                '\x0' ... '\x10fffe',
+                '\x80' ... '\x10ffff',
+                '\xd7ff' ... '\xe000'
+              ]
+          ],
       testProperty "multilingual plane" $ property do
         utf8Sequences (0x00 ... 0xffff)
           === [ UOne (0x0 ... 0x7f),

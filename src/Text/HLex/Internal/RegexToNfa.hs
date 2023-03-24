@@ -74,11 +74,7 @@ regexToNfa' from to = \case
   RE.Alt r1 r2 -> do
     regexToNfa' from to r1
     regexToNfa' from to r2
-  RE.Set set ->
-    -- prevent dead states, empty charset is an epsilon transition
-    if CharSet.null set
-      then emptyEdge from to
-      else charSetEdge from to set
+  RE.Set set -> charSetEdge from to set
   RE.Rep r -> do
     s <- freshState
     emptyEdge from s
