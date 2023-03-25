@@ -16,7 +16,6 @@ module Text.HLex.Internal.CharSet
   )
 where
 
-import Data.Char qualified as Char
 import Data.RangeSet.List (RSet)
 import Data.RangeSet.List qualified as RSet
 import Prelude hiding (null)

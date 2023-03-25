@@ -43,18 +43,14 @@ lexerToNfa lexer =
 lexerToNfa' :: MonadState (NfaBuilder (Lexer.Accept a)) m => Lexer a -> m Int
 lexerToNfa' Lexer {Lexer.rules} = do
   start <- freshState
-  for_ rules $ \rule -> do
-    (s1, _s2) <- ruleToNfa rule
-    -- need to connect this to the end
-    emptyEdge start s1
+  for_ rules \rule -> do
+    ruleToNfa start rule
   pure start
 
-ruleToNfa :: MonadState (NfaBuilder (Lexer.Accept a)) m => Lexer.Rule a -> m (Int, Int)
-ruleToNfa Lexer.Rule {Lexer.regex, Lexer.accept} = do
-  s1 <- freshState
-  s2 <- freshStateWith Nfa.defState {Nfa.accept = Just accept}
-  regexToNfa' s1 s2 regex
-  pure (s1, s2)
+ruleToNfa :: MonadState (NfaBuilder (Lexer.Accept a)) m => Nfa.StateId -> Lexer.Rule a -> m ()
+ruleToNfa from Lexer.Rule {Lexer.regex, Lexer.accept} = do
+  to <- freshStateWith Nfa.defState {Nfa.accept = Just accept}
+  regexToNfa' from to regex
 
 regexToNfa :: a -> RE.Regex -> Nfa a
 regexToNfa accept regex = Nfa {Nfa.start, Nfa.states = VB.fromListN (PVec.length nfa) (PVec.toList nfa)}
@@ -107,35 +103,22 @@ charSetToUtf8Sequences :: CharSet -> [Utf8Sequence]
 charSetToUtf8Sequences = concatMap (utf8Sequences . uncurry (...) . both Char.ord) . CharSet.toRangeList
 
 charSetEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> CharSet -> m ()
-charSetEdge from to set = altToNfa from to (charSetToUtf8Sequences set) utf8SequenceEdge
+charSetEdge from to set = do
+  altToNfa from to (charSetToUtf8Sequences set) utf8SequenceEdge
+  setIsCharEnd to
 
 utf8SequenceEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> Utf8Sequence -> m ()
 utf8SequenceEdge from to sequence = catToNfa from to (Foldable.toList sequence) utf8RangeEdge
 
 utf8RangeEdge :: MonadNfa a m => Nfa.StateId -> Nfa.StateId -> Utf8Range -> m ()
 utf8RangeEdge from to utf8Range = do
-  State.modify' $ \builder@NfaBuilder {nfa} -> do
-    builder
-      { nfa =
-          PVec.adjust
-            (\st@Nfa.State {Nfa.transitions} -> st {Nfa.transitions = (utf8Range, to) : transitions})
-            from
-            nfa
-      }
+  modifyState from \state ->
+    state {Nfa.transitions = (utf8Range, to) : Nfa.transitions state}
 
 emptyEdge :: MonadNfa a m => Int -> Int -> m ()
-emptyEdge from to = do
-  State.modify' $ \builder@NfaBuilder {nfa} ->
-    -- oof, this is why lenses exist
-    builder
-      { nfa =
-          PVec.adjust
-            ( \st@Nfa.State {Nfa.emptyTransitions} ->
-                st {Nfa.emptyTransitions = IntSet.insert to emptyTransitions}
-            )
-            from
-            nfa
-      }
+emptyEdge from to =
+  modifyState from \state ->
+    state {Nfa.emptyTransitions = IntSet.insert to $ Nfa.emptyTransitions state}
 
 addState :: Nfa.State a -> NfaBuilder a -> (Int, NfaBuilder a)
 addState s NfaBuilder {nfa, next} = (next, NfaBuilder {nfa = PVec.snoc nfa s, next = next + 1})
@@ -149,3 +132,16 @@ freshStateWith s = do
 
 freshState :: MonadNfa a m => m Int
 freshState = freshStateWith Nfa.defState
+
+setIsCharEnd :: MonadNfa a m => Nfa.StateId -> m ()
+setIsCharEnd s = modifyState s \state -> state {Nfa.isCharEnd = True}
+
+modifyState :: MonadNfa a m => Nfa.StateId -> (Nfa.State a -> Nfa.State a) -> m ()
+modifyState s f = State.modify' \builder@NfaBuilder {nfa} ->
+  builder
+    { nfa =
+        PVec.adjust
+          f
+          s
+          nfa
+    }

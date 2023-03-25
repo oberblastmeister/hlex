@@ -4,7 +4,8 @@ module Text.HLex.Internal.Dfa
   ( Pdfa,
     Dfa,
     Dfa' (..),
-    State (..),
+    State' (..),
+    State,
     PState,
     StateSet,
     inPdfa,
@@ -42,9 +43,11 @@ type Pdfa = Dfa' (HashMap StateSet) StateSet
 
 type Dfa = Dfa' VB.Vector Int
 
+type State = State' Int
+
 data Dfa' f s a = Dfa
   { start :: s,
-    states :: !(f (State s a))
+    states :: !(f (State' s a))
   }
 
 deriving instance (Show a, Show s) => Show (Dfa' (AssocList Int) s a)
@@ -59,19 +62,20 @@ instance Functor f => Bifunctor (Dfa' f) where
         states = fmap (bimap f g) states
       }
 
-data State s a = State
+data State' s a = State
   { transitions :: !(IntMap s),
+    isCharEnd :: !Bool,
     accept :: Maybe a
   }
   deriving (Show, Eq)
 
-type PState = State StateSet
+type PState = State' StateSet
 
 type StateSet = IntSet
 
-instance Bifunctor State where
-  bimap f g State {transitions, accept} =
-    State
+instance Bifunctor State' where
+  bimap f g state@State {transitions, accept} =
+    state
       { transitions = fmap f transitions,
         accept = fmap g accept
       }
@@ -84,16 +88,16 @@ valid Dfa {start, states} = validStateId start && all validState states
     validTransition (_, to) = validStateId to
     validStateId s = s >= 0 && s < VB.length states
 
-newState :: IntMap s -> State s a
-newState transitions = State {transitions, accept = Nothing}
+newState :: IntMap s -> State' s a
+newState transitions = State {transitions, accept = Nothing, isCharEnd = False}
 
-emptyState :: State s a
-emptyState = State mempty Nothing
+emptyState :: State' s a
+emptyState = State mempty False Nothing
 
 toAssocList :: Dfa a -> Dfa' (AssocList Int) Int a
 toAssocList = transform $ fromList @(AssocList _ _) . zip [0 :: Int ..] . VB.toList
 
-assocs :: Dfa a -> [(Int, State Int a)]
+assocs :: Dfa a -> [(Int, State a)]
 assocs Dfa {states} = zip [0 :: Int ..] $ VB.toList states
 
 inPdfa :: StateSet -> Pdfa a -> Bool
@@ -124,7 +128,7 @@ normalize Dfa {states, start} = Dfa {states = states', start = start'}
 
     start' = getState start
 
-    convertState :: State s a -> State Int a
+    convertState :: State' s a -> State a
     convertState state@State {transitions} = state {transitions = getState <$> transitions}
 
     getState :: s -> Int
@@ -134,16 +138,17 @@ normalize Dfa {states, start} = Dfa {states = states', start = start'}
 
     stateMap = fromList stateList
 
-simulate :: ByteString -> Dfa a -> Maybe (Int, a)
-simulate bs Dfa {start, states} = go start (0 :: Int) Nothing
+simulate :: ByteString -> Dfa a -> Maybe (Int, Int, a)
+simulate bs Dfa {start, states} = go start (0 :: Int) (0 :: Int) Nothing
   where
-    go s i lastMatch = case B.indexMaybe bs i of
+    go !s !index !charIndex !lastMatch = case B.indexMaybe bs index of
       Nothing -> result
       Just b ->
         case IntMap.lookup (fromIntegral @Word8 @Int b) (transitions state) of
           Nothing -> result
-          Just s' -> go s' (i + 1) newMatch
+          Just s' -> go s' (index + 1) newCharIndex newMatch
       where
         state = states VB.! s
-        newMatch = accept state <|> lastMatch
-        result = (i,) <$> newMatch
+        newCharIndex = charIndex + if isCharEnd state then 1 else 0
+        newMatch = (index,newCharIndex,) <$> accept state
+        result = newMatch <|> lastMatch

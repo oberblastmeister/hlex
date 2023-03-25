@@ -25,8 +25,9 @@ nfaToPdfa' nfa ndfa (ns : nss)
   | ns `Dfa.inPdfa` ndfa = nfaToPdfa' nfa ndfa nss
   | otherwise = nfaToPdfa' nfa ndfa' nss'
   where
-    ndfa' = Dfa.addPdfa ns Dfa.State {transitions, accept} ndfa
+    ndfa' = Dfa.addPdfa ns Dfa.State {transitions, accept, isCharEnd} ndfa
     nss' = IntMap.elems transitions ++ nss
     -- TODO: support right contexts
+    isCharEnd = Nfa.chooseIsCharEnd ns nfa
     accept = Nfa.chooseAccept ns nfa
     transitions = Nfa.transitionMapClosure ns nfa

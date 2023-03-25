@@ -60,7 +60,7 @@ common common-options
     base >= 4.12 && <5,
     text ^>= 2.0,
     bytestring,
-    template-haskell ^>= 2.18.0.0,
+    template-haskell >= 2.18.0.0,
     unordered-containers,
     hashable,
     containers,
@@ -70,7 +70,6 @@ common common-options
     vector,
     range-set-list,
     intervals,
-    megaparsec,
 
 library
   import: common-options

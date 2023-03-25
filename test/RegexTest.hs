@@ -20,7 +20,7 @@ import Text.HLex.Internal.Dfa qualified as Dfa
 import Text.HLex.Internal.Minimize qualified as Minimize
 import Text.HLex.Internal.Nfa qualified as Nfa
 import Text.HLex.Internal.NfaToDfa qualified as NfaToDfa
-import Text.HLex.Internal.Regex
+import Text.HLex.Internal.Regex (Regex)
 import Text.HLex.Internal.Regex qualified as RE
 import Text.HLex.Internal.RegexToNfa qualified as RegexToNfa
 import Text.HLex.Internal.Utf8
@@ -32,16 +32,16 @@ genRegexWith genChar = go
     go = do
       Gen.recursive
         Gen.choice
-        [ pure Empty,
-          Set . CharSet.fromString <$> Gen.list (Range.linear 0 10) genChar
+        [ pure RE.Empty,
+          RE.Set . CharSet.fromString <$> Gen.list (Range.linear 0 10) genChar
         ]
         [ Gen.subterm2 go go (<>),
-          Gen.subterm2 go go (\r r' -> alt [r, r']),
-          Gen.subterm go Rep
+          Gen.subterm2 go go (\r r' -> RE.alt [r, r']),
+          Gen.subterm go RE.Rep
         ]
 
 genAltRegex :: Int -> String -> Gen String -> Gen Regex
-genAltRegex i s genS = alt . fmap string <$> replicateM i ((++ s) <$> genS)
+genAltRegex i s genS = RE.alt . fmap RE.string <$> replicateM i ((++ s) <$> genS)
 
 genSuffixRegex :: Gen String -> Gen Regex
 genSuffixRegex genS = do
@@ -52,14 +52,17 @@ genSuffixRegex genS = do
 
 prop_match_string :: Property
 prop_match_string = property do
-  let genString = Gen.list (Range.linear 0 10) Gen.alphaNum
+  let genString = Gen.list (Range.linear 0 10) Gen.unicode
   s1 <- forAll genString
   s2 <- forAll genString
+  let t1 = T.pack s1
   accept <- forAll $ Gen.int (Range.linear 0 100)
   let r = RE.string s1
   let nfa = RegexToNfa.regexToNfa accept r
   let dfa' = NfaToDfa.nfaToDfa nfa
   let dfa = Minimize.minimize dfa'
+  annotateShow nfa
+  annotateShow dfa
   annotateShow r
   let bs1 = T.encodeUtf8 $ T.pack s1
   let bs2 = T.encodeUtf8 $ T.pack s2
@@ -67,7 +70,7 @@ prop_match_string = property do
   let dfaRes = Dfa.simulate bs dfa
   let nfaRes = Nfa.simulate bs nfa
   dfaRes === nfaRes
-  dfaRes === Just (B.length bs1, accept)
+  dfaRes === Just (B.length bs1, T.length t1, accept)
   pure ()
 
 prop_valid :: Property
@@ -112,7 +115,7 @@ predicatesProperty pred = property do
   if not (isSurrogate c) && pred c
     then do
       assert $ any (`matchUtf8Sequence` bs) sequences
-      dfaRes === Just (B.length bs, ())
+      dfaRes === Just (B.length bs, 1, ())
     else do
       assert $ not $ any (`matchUtf8Sequence` bs) sequences
       dfaRes === Nothing
