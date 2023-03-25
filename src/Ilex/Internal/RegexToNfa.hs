@@ -1,4 +1,4 @@
-module Text.HLex.Internal.RegexToNfa
+module Ilex.Internal.RegexToNfa
   ( lexerToNfa,
     regexToNfa,
   )
@@ -14,15 +14,15 @@ import Data.List.NonEmpty qualified as NE
 import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
 import Numeric.Interval.NonEmpty ((...))
-import Text.HLex.Internal.CharSet (CharSet)
-import Text.HLex.Internal.CharSet qualified as CharSet
-import Text.HLex.Internal.Lexer (Lexer (Lexer))
-import Text.HLex.Internal.Lexer qualified as Lexer
-import Text.HLex.Internal.Nfa (Nfa (Nfa))
-import Text.HLex.Internal.Nfa qualified as Nfa
-import Text.HLex.Internal.Regex qualified as RE
-import Text.HLex.Internal.Utf8
-import Text.HLex.Internal.Utils
+import Ilex.Internal.CharSet (CharSet)
+import Ilex.Internal.CharSet qualified as CharSet
+import Ilex.Internal.Lexer (Lexer (Lexer))
+import Ilex.Internal.Lexer qualified as Lexer
+import Ilex.Internal.Nfa (Nfa (Nfa))
+import Ilex.Internal.Nfa qualified as Nfa
+import Ilex.Internal.Regex qualified as RE
+import Ilex.Internal.Utf8
+import Ilex.Internal.Utils
 
 data NfaBuilder a = NfaBuilder
   { nfa :: !(PVec.Vector (Nfa.State a)),
@@ -31,7 +31,7 @@ data NfaBuilder a = NfaBuilder
 
 type MonadNfa a = MonadState (NfaBuilder a)
 
-lexerToNfa :: Lexer a -> Nfa (Lexer.Accept a)
+lexerToNfa :: Lexer a -> Nfa a
 lexerToNfa lexer =
   Nfa
     { Nfa.start,
@@ -40,14 +40,14 @@ lexerToNfa lexer =
   where
     (start, NfaBuilder {nfa}) = State.runState (lexerToNfa' lexer) newNfaBuilder
 
-lexerToNfa' :: MonadState (NfaBuilder (Lexer.Accept a)) m => Lexer a -> m Int
+lexerToNfa' :: MonadState (NfaBuilder a) m => Lexer a -> m Int
 lexerToNfa' Lexer {Lexer.rules} = do
   start <- freshState
   for_ rules \rule -> do
     ruleToNfa start rule
   pure start
 
-ruleToNfa :: MonadState (NfaBuilder (Lexer.Accept a)) m => Nfa.StateId -> Lexer.Rule a -> m ()
+ruleToNfa :: MonadState (NfaBuilder a) m => Nfa.StateId -> Lexer.Rule a -> m ()
 ruleToNfa from Lexer.Rule {Lexer.regex, Lexer.accept} = do
   to <- freshStateWith Nfa.defState {Nfa.accept = Just accept}
   regexToNfa' from to regex

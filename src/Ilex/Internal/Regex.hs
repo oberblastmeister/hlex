@@ -1,11 +1,11 @@
-module Text.HLex.Internal.Regex where
+module Ilex.Internal.Regex where
 
 import Data.Char qualified as Char
 import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NE
-import Text.HLex.Internal.CharSet (CharSet)
-import Text.HLex.Internal.CharSet qualified as CharSet
+import Ilex.Internal.CharSet (CharSet)
+import Ilex.Internal.CharSet qualified as CharSet
 import Prelude hiding (null)
 
 data Regex

@@ -1,4 +1,4 @@
-module Text.HLex.Internal.Minimize where
+module Ilex.Internal.Minimize where
 
 import Data.Bifunctor (first)
 import Data.Either qualified as Either
@@ -17,9 +17,9 @@ import Data.List qualified as List
 import Data.Maybe (fromJust)
 import Data.Vector qualified as VB
 import GHC.Exts (fromList, toList)
-import Text.HLex.Internal.AssocList qualified as AssocList
-import Text.HLex.Internal.Dfa (Dfa, Dfa' (Dfa))
-import Text.HLex.Internal.Dfa qualified as Dfa
+import Ilex.Internal.AssocList qualified as AssocList
+import Ilex.Internal.Dfa (Dfa, Dfa' (Dfa))
+import Ilex.Internal.Dfa qualified as Dfa
 
 -- % Hopcroft's Algorithm for DFA minimization (cut/pasted from Wikipedia): % X refines Y into Y1 and Y2 means
 -- %  Y1 := Y ∩ X

@@ -1,4 +1,4 @@
-module Text.HLex.Internal.Runtime where
+module Ilex.Internal.Runtime where
 
 import Data.Primitive (Ptr)
 import Data.Word (Word64)

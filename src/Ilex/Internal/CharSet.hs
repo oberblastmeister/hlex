@@ -1,4 +1,4 @@
-module Text.HLex.Internal.CharSet
+module Ilex.Internal.CharSet
   ( CharSet(..),
     empty,
     singleton,

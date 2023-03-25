@@ -75,19 +75,19 @@ library
   import: common-options
   hs-source-dirs: src
   exposed-modules:
-    Text.HLex
-      Text.HLex.Internal.CharSet
-      Text.HLex.Internal.Utf8
-      Text.HLex.Internal.Utils
-      Text.HLex.Internal.Dfa
-      Text.HLex.Internal.Nfa
-      Text.HLex.Internal.RegexToNfa
-      Text.HLex.Internal.NfaToDfa
-      Text.HLex.Internal.Minimize
-      Text.HLex.Internal.Lexer
-      Text.HLex.Internal.Regex
-      Text.HLex.Internal.AssocList
-      Text.HLex.Internal.Runtime
+    Ilex
+      Ilex.Internal.CharSet
+      Ilex.Internal.Utf8
+      Ilex.Internal.Utils
+      Ilex.Internal.Dfa
+      Ilex.Internal.Nfa
+      Ilex.Internal.RegexToNfa
+      Ilex.Internal.NfaToDfa
+      Ilex.Internal.Minimize
+      Ilex.Internal.Lexer
+      Ilex.Internal.Regex
+      Ilex.Internal.AssocList
+      Ilex.Internal.Runtime
     
 
 common rtsopts

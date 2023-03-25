@@ -4,12 +4,12 @@ import Ilex.Internal.Regex
 
 newtype Lexer a = Lexer {rules :: [Rule a]}
 
-newtype LexerBuilder a b = LexerBuilder
-  { runLexerBuilder :: Writer (Dual [RuleBuild a]) b
-  }
-  deriving
-    (Functor, Applicative, Monad, MonadWriter (Dual [RuleBuild a]))
-    via (Writer (Dual [RuleBuild a]))
+-- newtype LexerBuilder a b = LexerBuilder
+--   { runLexerBuilder :: Writer (Dual [RuleBuild a]) b
+--   }
+--   deriving
+--     (Functor, Applicative, Monad, MonadWriter (Dual [RuleBuild a]))
+--     via (Writer (Dual [RuleBuild a]))
 
 -- data RuleBuild a = RuleBuild
 --   { regex :: Core.Regex,

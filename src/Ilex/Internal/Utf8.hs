@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 
-module Text.HLex.Internal.Utf8 where
+module Ilex.Internal.Utf8 where
 
 import Control.Applicative (asum)
 import Control.Monad ((<=<))

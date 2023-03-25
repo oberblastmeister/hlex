@@ -1,14 +1,14 @@
-module Text.HLex.Internal.NfaToDfa
+module Ilex.Internal.NfaToDfa
   ( nfaToDfa,
   )
 where
 
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet qualified as IntSet
-import Text.HLex.Internal.Dfa (Dfa, Dfa' (Dfa), Pdfa)
-import Text.HLex.Internal.Dfa qualified as Dfa
-import Text.HLex.Internal.Nfa (Nfa (Nfa))
-import Text.HLex.Internal.Nfa qualified as Nfa
+import Ilex.Internal.Dfa (Dfa, Dfa' (Dfa), Pdfa)
+import Ilex.Internal.Dfa qualified as Dfa
+import Ilex.Internal.Nfa (Nfa (Nfa))
+import Ilex.Internal.Nfa qualified as Nfa
 
 nfaToDfa :: Ord a => Nfa a -> Dfa a
 nfaToDfa = Dfa.normalize . nfaToPdfa

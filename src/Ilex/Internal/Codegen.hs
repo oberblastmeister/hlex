@@ -3,7 +3,7 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE UnliftedNewtypes #-}
 
-module Text.HLex.Internal.Codegen where
+module Ilex.Internal.Codegen where
 
 import Control.Monad.State (MonadState (..))
 import Data.Function (on)
@@ -19,8 +19,8 @@ import Data.Word (Word8)
 import GHC.Exts (Int (..), Int#, (+#))
 import GHC.Exts qualified as Exts
 import Language.Haskell.TH qualified as TH
-import Text.HLex.Internal.Dfa (Dfa, Dfa' (Dfa))
-import Text.HLex.Internal.Dfa qualified as Dfa
+import Ilex.Internal.Dfa (Dfa, Dfa' (Dfa))
+import Ilex.Internal.Dfa qualified as Dfa
 
 newtype LexerEnv = LexerEnv# (# ByteArray#, Int#, Int# #)
 
@@ -106,7 +106,7 @@ data CodegenConfig = CodegenConfig
     onError :: TH.ExpQ,
     onEof :: TH.ExpQ
   }
-
+  
 codegen :: CodegenConfig -> Dfa Int -> TH.ExpQ
 codegen CodegenConfig {acceptMap, onEof, onError} Dfa {Dfa.start, Dfa.states} = do
   stateToNameMap <- VB.generateM numStates (TH.newName . ("state" ++) . show)

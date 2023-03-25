@@ -5,8 +5,8 @@ import Data.IntMap.Strict qualified as IntMap
 import GHC.Exts (fromList)
 import Test.Tasty
 import Test.Tasty.HUnit
-import Text.HLex.Internal.Dfa
-import Text.HLex.Internal.Minimize qualified as Minimize
+import Ilex.Internal.Dfa
+import Ilex.Internal.Minimize qualified as Minimize
 
 newState' :: Int -> s -> State' s a
 newState' k = newState . IntMap.singleton k

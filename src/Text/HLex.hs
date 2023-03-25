@@ -1,2 +1,0 @@
-module Text.HLex where
-

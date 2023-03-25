@@ -1,4 +1,4 @@
-module Text.HLex.Internal.Utils where
+module Ilex.Internal.Utils where
 
 import Data.Bifunctor (Bifunctor, bimap)
 import Data.RangeSet.List (RSet)

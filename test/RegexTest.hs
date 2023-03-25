@@ -15,16 +15,16 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Test.Tasty
 import Test.Tasty.Hedgehog
-import Text.HLex.Internal.CharSet qualified as CharSet
-import Text.HLex.Internal.Dfa qualified as Dfa
-import Text.HLex.Internal.Minimize qualified as Minimize
-import Text.HLex.Internal.Nfa qualified as Nfa
-import Text.HLex.Internal.NfaToDfa qualified as NfaToDfa
-import Text.HLex.Internal.Regex (Regex)
-import Text.HLex.Internal.Regex qualified as RE
-import Text.HLex.Internal.RegexToNfa qualified as RegexToNfa
-import Text.HLex.Internal.Utf8
-import Text.HLex.Internal.Utils
+import Ilex.Internal.CharSet qualified as CharSet
+import Ilex.Internal.Dfa qualified as Dfa
+import Ilex.Internal.Minimize qualified as Minimize
+import Ilex.Internal.Nfa qualified as Nfa
+import Ilex.Internal.NfaToDfa qualified as NfaToDfa
+import Ilex.Internal.Regex (Regex)
+import Ilex.Internal.Regex qualified as RE
+import Ilex.Internal.RegexToNfa qualified as RegexToNfa
+import Ilex.Internal.Utf8
+import Ilex.Internal.Utils
 
 genRegexWith :: Gen Char -> Gen Regex
 genRegexWith genChar = go
