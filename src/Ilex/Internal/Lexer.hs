@@ -1,41 +1,32 @@
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 module Ilex.Internal.Lexer where
 
+import Control.Monad.Writer.CPS (MonadWriter, Writer)
+import Control.Monad.Writer.CPS qualified as Writer
+import Data.Monoid (Dual (..))
+import Data.Primitive (ByteArray#)
+import GHC.Exts (Int#)
 import Ilex.Internal.Regex
+import Language.Haskell.TH qualified as TH
 
-newtype Lexer a = Lexer {rules :: [Rule a]}
+type Lexer a = [Rule a]
 
--- newtype LexerBuilder a b = LexerBuilder
---   { runLexerBuilder :: Writer (Dual [RuleBuild a]) b
---   }
---   deriving
---     (Functor, Applicative, Monad, MonadWriter (Dual [RuleBuild a]))
---     via (Writer (Dual [RuleBuild a]))
-
--- data RuleBuild a = RuleBuild
---   { regex :: Core.Regex,
---     ruleCode :: Code Q a
---   }
+newtype LexerBuilder a b = LexerBuilder
+  { runLexerBuilder :: Writer (Dual [Rule a]) b
+  }
+  deriving
+    (Functor, Applicative, Monad, MonadWriter (Dual [Rule a]))
+    via (Writer (Dual [Rule a]))
 
 data Rule a = Rule
   { regex :: Regex,
     accept :: a
   }
 
-data Accept a = Accept
-  { value :: a,
-    priority :: !Int
-  }
-  deriving (Show, Eq, Functor, Foldable, Traversable)
+rule :: Regex -> TH.ExpQ -> LexerBuilder TH.ExpQ ()
+rule regex accept = Writer.tell $ Dual [Rule {regex, accept = [|\(_ :: ByteArray#) (_ :: Int#) (_ :: Int#) -> $accept|]}]
 
--- (~=) :: Dsl.Regex () -> Code Q a -> LexerBuilder a ()
--- re ~= code = tell $ Dual [RuleBuild {regex = Dsl.runRegex re, ruleCode = code}]
-
--- evalLexerBuilder :: LexerBuilder a () -> Lexer a
--- evalLexerBuilder =
---   Lexer
---     . fmap (\(i, RuleBuild {regex, ruleCode}) -> Rule {regex, accept = Accept {value = ruleCode, priority = i}})
---     . zip [1 ..]
---     . reverse
---     . getDual
---     . execWriter
---     . runLexerBuilder
+evalLexerBuilder :: LexerBuilder a () -> [Rule a]
+evalLexerBuilder = reverse . getDual . Writer.execWriter . runLexerBuilder

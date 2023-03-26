@@ -1,5 +1,5 @@
 cabal-version:      3.6
-name:               hlex
+name:               ilex
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
@@ -65,7 +65,7 @@ common common-options
     hashable,
     containers,
     pvector,
-    mtl,
+    mtl >= 2.3.1,
     primitive,
     vector,
     range-set-list,
@@ -76,18 +76,21 @@ library
   hs-source-dirs: src
   exposed-modules:
     Ilex
-      Ilex.Internal.CharSet
-      Ilex.Internal.Utf8
-      Ilex.Internal.Utils
-      Ilex.Internal.Dfa
-      Ilex.Internal.Nfa
-      Ilex.Internal.RegexToNfa
-      Ilex.Internal.NfaToDfa
-      Ilex.Internal.Minimize
-      Ilex.Internal.Lexer
-      Ilex.Internal.Regex
-      Ilex.Internal.AssocList
-      Ilex.Internal.Runtime
+      Ilex.Regex
+        Ilex.Internal.Monad
+        Ilex.Internal.CharSet
+        Ilex.Internal.Codegen
+        Ilex.Internal.Utf8
+        Ilex.Internal.Utils
+        Ilex.Internal.Dfa
+        Ilex.Internal.Nfa
+        Ilex.Internal.RegexToNfa
+        Ilex.Internal.NfaToDfa
+        Ilex.Internal.Minimize
+        Ilex.Internal.Lexer
+        Ilex.Internal.Regex
+        Ilex.Internal.AssocList
+        Ilex.Internal.Runtime
     
 
 common rtsopts
@@ -96,36 +99,28 @@ common rtsopts
     -rtsopts
     -with-rtsopts=-N
 
-executable hlex-exe
-  import: common-options, rtsopts
-  main-is: Main.hs
-  -- Modules included in this executable, other than Main.
-  -- other-modules:
-  build-depends:
-    hlex
-  hs-source-dirs: app
-  
-test-suite hlex-test
+test-suite ilex-test
   import: common-options, rtsopts
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Main.hs
   other-modules:
     MinimizeTest
+    LexerTest
     RegexTest
     Utf8Test
   build-depends:
-    hlex,
+    ilex,
     tasty,
     tasty-hedgehog,
     hedgehog,
     tasty-hunit,
 
-benchmark hlex-bench
+benchmark ilex-bench
   import: common-options, rtsopts
   type: exitcode-stdio-1.0
   hs-source-dirs: bench
   main-is: Main.hs
   build-depends:
-    hlex,
+    ilex,
     tasty-bench ^>= 0.3.1,
