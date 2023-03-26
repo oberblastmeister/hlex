@@ -1,19 +1,19 @@
-module Ilex (lex, Lexer.rule) where
+module Ilex (lex, Lexer.rule, (Lexer.~=), (Lexer.~>), inputText) where
 
 import Data.Vector qualified as VB
-import Ilex.Internal.Codegen qualified as Codegen
+import Ilex.Internal.Backend.Fun qualified as Backend
 import Ilex.Internal.Lexer qualified as Lexer
 import Ilex.Internal.Minimize qualified as Minimize
 import Ilex.Internal.NfaToDfa qualified as NfaToDfa
 import Ilex.Internal.RegexToNfa qualified as RegexToNfa
 import Language.Haskell.TH qualified as TH
 import Prelude hiding (lex)
-import Debug.Trace
+import Ilex.Internal.Monad (inputText)
 
 lex :: TH.ExpQ -> TH.ExpQ -> Lexer.LexerBuilder TH.ExpQ () -> TH.ExpQ
 lex onError onEof builder =
-  Codegen.codegen
-    Codegen.CodegenConfig
+  Backend.codegen
+    Backend.CodegenConfig
       { acceptMap,
         onError,
         onEof
@@ -26,4 +26,3 @@ lex onError onEof builder =
     nfa = RegexToNfa.lexerToNfa lexer'
     dfa = NfaToDfa.nfaToDfa nfa
     minDfa = Minimize.minimize dfa
-    !_ = traceId $ show minDfa

@@ -8,10 +8,9 @@ import Control.Monad.Writer.CPS qualified as Writer
 import Data.Monoid (Dual (..))
 import Data.Primitive (ByteArray#)
 import GHC.Exts (Int#)
+import Ilex.Internal.Monad (LexerInput#, LexerState#)
 import Ilex.Internal.Regex
 import Language.Haskell.TH qualified as TH
-
-type Lexer a = [Rule a]
 
 newtype LexerBuilder a b = LexerBuilder
   { runLexerBuilder :: Writer (Dual [Rule a]) b
@@ -25,8 +24,17 @@ data Rule a = Rule
     accept :: a
   }
 
+ruleWith :: Regex -> TH.ExpQ -> LexerBuilder TH.ExpQ ()
+ruleWith regex accept = Writer.tell $ Dual [Rule {regex, accept}]
+
 rule :: Regex -> TH.ExpQ -> LexerBuilder TH.ExpQ ()
-rule regex accept = Writer.tell $ Dual [Rule {regex, accept = [|\(_ :: ByteArray#) (_ :: Int#) (_ :: Int#) -> $accept|]}]
+rule regex accept = ruleWith regex [|\(_ :: LexerInput#) -> $accept|]
+
+(~>) :: Regex -> TH.ExpQ -> LexerBuilder TH.ExpQ ()
+(~>) = ruleWith
+
+(~=) :: Regex -> TH.ExpQ -> LexerBuilder TH.ExpQ ()
+(~=) = rule
 
 evalLexerBuilder :: LexerBuilder a () -> [Rule a]
 evalLexerBuilder = reverse . getDual . Writer.execWriter . runLexerBuilder

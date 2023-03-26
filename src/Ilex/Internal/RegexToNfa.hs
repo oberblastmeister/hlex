@@ -15,7 +15,6 @@ import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
 import Ilex.Internal.CharSet (CharSet)
 import Ilex.Internal.CharSet qualified as CharSet
-import Ilex.Internal.Lexer (Lexer)
 import Ilex.Internal.Lexer qualified as Lexer
 import Ilex.Internal.Nfa (Nfa (Nfa))
 import Ilex.Internal.Nfa qualified as Nfa
@@ -31,7 +30,7 @@ data NfaBuilder a = NfaBuilder
 
 type MonadNfa a = MonadState (NfaBuilder a)
 
-lexerToNfa :: Lexer a -> Nfa a
+lexerToNfa :: [Lexer.Rule a] -> Nfa a
 lexerToNfa lexer =
   Nfa
     { Nfa.start,
@@ -40,7 +39,7 @@ lexerToNfa lexer =
   where
     (start, NfaBuilder {nfa}) = State.runState (lexerToNfa' lexer) newNfaBuilder
 
-lexerToNfa' :: MonadState (NfaBuilder a) m => Lexer a -> m Int
+lexerToNfa' :: MonadState (NfaBuilder a) m => [Lexer.Rule a] -> m Int
 lexerToNfa' rules = do
   start <- freshState
   for_ rules \rule -> do

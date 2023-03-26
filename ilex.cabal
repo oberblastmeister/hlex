@@ -79,7 +79,8 @@ library
       Ilex.Regex
         Ilex.Internal.Monad
         Ilex.Internal.CharSet
-        Ilex.Internal.Codegen
+        Ilex.Internal.Backend.Fun
+        Ilex.Internal.Backend.Table
         Ilex.Internal.Utf8
         Ilex.Internal.Utils
         Ilex.Internal.Dfa
@@ -91,6 +92,7 @@ library
         Ilex.Internal.Regex
         Ilex.Internal.AssocList
         Ilex.Internal.Runtime
+        Ilex.Internal.ByteString
     
 
 common rtsopts
@@ -105,10 +107,12 @@ test-suite ilex-test
   hs-source-dirs: test
   main-is: Main.hs
   other-modules:
+    LexerUtils
     MinimizeTest
     LexerTest
     RegexTest
     Utf8Test
+    SimpleTest
   build-depends:
     ilex,
     tasty,

@@ -7,20 +7,47 @@
 module Ilex.Internal.Monad where
 
 import Control.Monad.State (MonadState (..))
+import Data.ByteString (ByteString)
 import Data.Primitive (ByteArray#)
-import GHC.Exts (Int (..), Int#)
+import Data.Primitive qualified as Primitive
+import Data.Text (Text)
+import Data.Text.Array qualified
+import Data.Text.Internal qualified
+import GHC.Exts (Int (..), Int#, (+#), (-#))
+import GHC.Exts qualified as Exts
+import Ilex.Internal.ByteString (unpackByteString)
 
-newtype LexerEnv = LexerEnv# (# ByteArray#, Int#, Int# #)
+newtype LexerInput# = LexerInput## (# ByteArray#, LexerState#, LexerState# #)
 
-pattern LexerEnv :: ByteArray# -> Int# -> Int# -> LexerEnv
-pattern LexerEnv {arr, len, arrOff} = LexerEnv# (# arr, len, arrOff #)
+pattern LexerInput# :: ByteArray# -> LexerState# -> LexerState# -> LexerInput#
+pattern LexerInput# {inputArr#, inputStart#, inputEnd#} = LexerInput## (# inputArr#, inputStart#, inputEnd# #)
+
+{-# COMPLETE LexerInput# #-}
+
+inputText :: LexerInput# -> Text
+inputText
+  LexerInput#
+    { inputArr#,
+      inputStart# = LexerState {off#},
+      inputEnd# = LexerState {off# = endOff#}
+    } =
+    Data.Text.Internal.Text
+      (Data.Text.Array.ByteArray inputArr#)
+      (I# off#)
+      (I# (endOff# -# off#))
+{-# INLINE inputText #-}
+
+newtype LexerEnv# = LexerEnv# (# ByteArray#, Int#, Int# #)
+
+pattern LexerEnv :: ByteArray# -> Int# -> Int# -> LexerEnv#
+pattern LexerEnv {arr#, endOff#, arrOff#} = LexerEnv# (# arr#, endOff#, arrOff# #)
 
 {-# COMPLETE LexerEnv #-}
 
-newtype LexerState = LexerState# (# Int# #)
+newtype LexerState# = LexerState# (# Int#, Int# #)
 
-pattern LexerState :: Int# -> LexerState
-pattern LexerState {off} = LexerState# (# off #)
+pattern LexerState :: Int# -> Int# -> LexerState#
+pattern LexerState {off#, charOff#} = LexerState# (# off#, charOff# #)
 
 {-# COMPLETE LexerState #-}
 
@@ -41,40 +68,67 @@ liftLineCol (LineCol# {line#, col#}) = LineCol {line = I# line#, col = I# col#}
 {-# INLINE liftLineCol #-}
 
 class Monad m => MonadLexer m where
-  withLexerEnv :: (LexerEnv -> m a) -> m a
-  withLexerState :: (LexerState -> m a) -> m a
-  setLexerState :: LexerState -> m ()
+  withLexerEnv :: (LexerEnv# -> m a) -> m a
+  withLexerState :: (LexerState# -> m a) -> m a
+  setLexerState :: LexerState# -> m ()
 
-newtype Lexer s a = Lexer {runLexer :: LexerEnv -> LexerState -> s -> (# LexerState, s, a #)}
+getCharPos :: MonadLexer m => m Int
+getCharPos = withLexerState \LexerState {charOff#} -> pure (I# charOff#)
+{-# INLINE getCharPos #-}
 
-instance Functor (Lexer s) where
-  fmap f (Lexer m) = Lexer \env ls s -> case m env ls s of
+getBytePos :: MonadLexer m => m Int
+getBytePos = withLexerState \LexerState {off#} -> pure (I# off#)
+{-# INLINE getBytePos #-}
+
+runLexText :: Text -> s -> Lex s a -> (s, a)
+runLexText (Data.Text.Internal.Text (Data.Text.Array.ByteArray bs) (I# off#) (I# len#)) s (Lex f) =
+  case f (LexerEnv {arr# = bs, endOff# = off# +# len#, arrOff# = off#}) (LexerState {off# = off#, charOff# = 0#}) s of
+    (# _, s, a #) -> (s, a)
+
+runLexByteString :: ByteString -> s -> Lex s a -> (s, a)
+runLexByteString bytestring s (Lex f) =
+  case f (LexerEnv {arr# = bs, endOff# = endOff#, arrOff# = off#}) (LexerState {off# = off#, charOff# = 0#}) s of
+    (# _, s, a #) -> (s, a)
+  where
+    !(Primitive.ByteArray bs, I# off#, I# endOff#) = unpackByteString bytestring
+
+newtype Lex s a = Lex' {unLex :: LexerEnv# -> LexerState# -> s -> (# LexerState#, s, a #)}
+
+pattern Lex :: (LexerEnv# -> LexerState# -> s -> (# LexerState#, s, a #)) -> Lex s a
+pattern Lex f <- Lex' f
+  where
+    Lex f = Lex' $ Exts.oneShot \le -> Exts.oneShot \ls -> Exts.oneShot \s -> f le ls s
+
+{-# COMPLETE Lex #-}
+
+instance Functor (Lex s) where
+  fmap f (Lex m) = Lex \env ls s -> case m env ls s of
     (# ls, s, a #) -> (# ls, s, f a #)
   {-# INLINE fmap #-}
 
-instance Applicative (Lexer s) where
-  pure a = Lexer \_ ls s -> (# ls, s, a #)
+instance Applicative (Lex s) where
+  pure a = Lex \_ ls s -> (# ls, s, a #)
   {-# INLINE pure #-}
-  Lexer f <*> Lexer a = Lexer \env ls s -> case f env ls s of
+  Lex f <*> Lex a = Lex \env ls s -> case f env ls s of
     (# ls, s, f' #) -> case a env ls s of
       (# ls, s, a' #) -> (# ls, s, f' a' #)
   {-# INLINE (<*>) #-}
 
-instance Monad (Lexer s) where
-  Lexer m >>= f = Lexer \env ls s -> case m env ls s of
-    (# ls, s, a #) -> runLexer (f a) env ls s
+instance Monad (Lex s) where
+  Lex m >>= f = Lex \env ls s -> case m env ls s of
+    (# ls, s, a #) -> unLex (f a) env ls s
   {-# INLINE (>>=) #-}
 
-instance MonadState s (Lexer s) where
-  get = Lexer \_ ls s -> (# ls, s, s #)
+instance MonadState s (Lex s) where
+  get = Lex \_ ls s -> (# ls, s, s #)
   {-# INLINE get #-}
-  put s = Lexer \_ ls _ -> (# ls, s, () #)
+  put s = Lex \_ ls _ -> (# ls, s, () #)
   {-# INLINE put #-}
 
-instance MonadLexer (Lexer s) where
-  withLexerEnv f = Lexer \env ls s -> runLexer (f env) env ls s
+instance MonadLexer (Lex s) where
+  withLexerEnv f = Lex \env ls s -> unLex (f env) env ls s
   {-# INLINE withLexerEnv #-}
-  withLexerState f = Lexer \env ls s -> runLexer (f ls) env ls s
+  withLexerState f = Lex \env ls s -> unLex (f ls) env ls s
   {-# INLINE withLexerState #-}
-  setLexerState ls = Lexer \_env _ s -> (# ls, s, () #)
+  setLexerState ls = Lex \_env _ s -> (# ls, s, () #)
   {-# INLINE setLexerState #-}
