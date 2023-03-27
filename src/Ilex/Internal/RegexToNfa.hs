@@ -15,10 +15,11 @@ import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
 import Ilex.Internal.CharSet (CharSet)
 import Ilex.Internal.CharSet qualified as CharSet
-import Ilex.Internal.Lexer qualified as Lexer
 import Ilex.Internal.Nfa (Nfa (Nfa))
 import Ilex.Internal.Nfa qualified as Nfa
 import Ilex.Internal.Regex qualified as RE
+import Ilex.Internal.Rule (Rule (..))
+import Ilex.Internal.Rule qualified as Rule
 import Ilex.Internal.Utf8
 import Ilex.Internal.Utils
 import Numeric.Interval.NonEmpty ((...))
@@ -30,7 +31,7 @@ data NfaBuilder a = NfaBuilder
 
 type MonadNfa a = MonadState (NfaBuilder a)
 
-lexerToNfa :: [Lexer.Rule a] -> Nfa a
+lexerToNfa :: [Rule a] -> Nfa a
 lexerToNfa lexer =
   Nfa
     { Nfa.start,
@@ -39,15 +40,15 @@ lexerToNfa lexer =
   where
     (start, NfaBuilder {nfa}) = State.runState (lexerToNfa' lexer) newNfaBuilder
 
-lexerToNfa' :: MonadState (NfaBuilder a) m => [Lexer.Rule a] -> m Int
+lexerToNfa' :: MonadState (NfaBuilder a) m => [Rule a] -> m Int
 lexerToNfa' rules = do
   start <- freshState
   for_ rules \rule -> do
     ruleToNfa start rule
   pure start
 
-ruleToNfa :: MonadState (NfaBuilder a) m => Nfa.StateId -> Lexer.Rule a -> m ()
-ruleToNfa from Lexer.Rule {Lexer.regex, Lexer.accept} = do
+ruleToNfa :: MonadState (NfaBuilder a) m => Nfa.StateId -> Rule a -> m ()
+ruleToNfa from Rule {regex, accept} = do
   to <- freshStateWith Nfa.defState {Nfa.accept = Just accept}
   regexToNfa' from to regex
 

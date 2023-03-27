@@ -93,7 +93,7 @@ library
         Ilex.Internal.RegexToNfa
         Ilex.Internal.NfaToDfa
         Ilex.Internal.Minimize
-        Ilex.Internal.Lexer
+        Ilex.Internal.Rule
         Ilex.Internal.Regex
         Ilex.Internal.AssocList
         Ilex.Internal.Runtime

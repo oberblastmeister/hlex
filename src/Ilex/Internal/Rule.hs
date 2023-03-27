@@ -1,7 +1,7 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Ilex.Internal.Lexer where
+module Ilex.Internal.Rule where
 
 import Control.Monad.Writer.CPS (MonadWriter, Writer)
 import Control.Monad.Writer.CPS qualified as Writer
@@ -10,7 +10,7 @@ import Ilex.Internal.Monad (LexerInput)
 import Ilex.Internal.Regex
 import Language.Haskell.TH qualified as TH
 
-newtype LexerBuilder a b = LexerBuilder
+newtype RuleBuilder a b = RuleBuilder
   { runLexerBuilder :: Writer (Dual [Rule a]) b
   }
   deriving
@@ -22,11 +22,11 @@ data Rule a = Rule
     accept :: a
   }
 
-rule :: Regex -> TH.ExpQ -> LexerBuilder TH.ExpQ ()
+rule :: Regex -> TH.ExpQ -> RuleBuilder TH.ExpQ ()
 rule regex accept = Writer.tell $ Dual [Rule {regex, accept}]
 
-(~=) :: Regex -> TH.ExpQ -> LexerBuilder TH.ExpQ ()
+(~=) :: Regex -> TH.ExpQ -> RuleBuilder TH.ExpQ ()
 (~=) = rule
 
-evalLexerBuilder :: LexerBuilder a () -> [Rule a]
-evalLexerBuilder = reverse . getDual . Writer.execWriter . runLexerBuilder
+evalRuleBuilder :: RuleBuilder a () -> [Rule a]
+evalRuleBuilder = reverse . getDual . Writer.execWriter . runLexerBuilder

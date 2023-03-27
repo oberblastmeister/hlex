@@ -115,12 +115,12 @@ predicatesProperty pred = property do
   if not (isSurrogate c) && pred c
     then do
       assert $ any (`matchUtf8Sequence` bs) sequences
-      dfaRes === Just (B.length bs, 1, ())
+      dfaRes == Just (B.length bs, 1, ())
     else do
       assert $ not $ any (`matchUtf8Sequence` bs) sequences
       dfaRes === Nothing
   where
-    r = RE.when pred
+    r = RE.when' pred
     nfa = RegexToNfa.regexToNfa () r
     dfa = NfaToDfa.nfaToDfa nfa
     minDfa = Minimize.minimize dfa
