@@ -82,6 +82,7 @@ library
       Ilex.Regex
         Ilex.Internal.Monad
         Ilex.Internal.CharSet
+        Ilex.Internal.Driver
         Ilex.Internal.Backend
           Ilex.Internal.Backend.Fun
           Ilex.Internal.Backend.Table

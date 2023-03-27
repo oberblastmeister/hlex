@@ -7,7 +7,7 @@ module Ilex.Internal.Backend.Fun where
 import Data.Traversable (for)
 import Data.Vector qualified as VB
 import Data.Word (Word8)
-import GHC.Exts (Int (..),  (+#))
+import GHC.Exts (Int (..), (+#))
 import GHC.Exts qualified as Exts
 import GHC.Stack (HasCallStack)
 import GHC.Word (Word8 (W8#))
@@ -94,19 +94,9 @@ codegen config@BackendConfig {acceptMap} Dfa {Dfa.start, Dfa.states} = do
         let !name = stateToNameMap ! s
         let !state = states ! s
         codegenState name state
-      onErrorExp =
-        [|
-          \(end :: LexerState#) -> do
-            setLexerState end
-            $(onError config)
-          |]
+      onErrorExp = withInpExp (onError config)
+      onEofExp = withInpExp (onEof config)
       onErrorDec = TH.valD (TH.varP onErrorName) (TH.normalB onErrorExp) []
-      onEofExp =
-        [|
-          \(end :: LexerState#) -> do
-            setLexerState end
-            $(onEof config)
-          |]
       onEofDec = TH.valD (TH.varP onEofName) (TH.normalB onEofExp) []
       decs = onErrorDec : onEofDec : acceptSwitchDec acceptMap acceptSwitchName : stateDecs
   TH.letE decs [|withLexerState $ $(TH.varE (stateToNameMap ! start)) NoLastMatch#|]

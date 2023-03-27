@@ -47,10 +47,28 @@ acceptSwitchDec acceptMap name =
     (TH.normalB $ acceptSwitchExp acceptMap)
     []
 
+withInpExp :: TH.ExpQ -> TH.ExpQ
+withInpExp exp = do
+  [|
+    \(end :: LexerState#) -> withLexerEnv $ \LexerEnv {arr#, arrOff#} ->
+      withLexerState $ \start -> do
+        setLexerState end
+        $exp
+          ( LI
+              LexerInput#
+                { inputArr# = arr#,
+                  inputArrOff# = arrOff#,
+                  inputStart# = start,
+                  inputEnd# = end
+                }
+          )
+    |]
+
 acceptSwitchExp :: VB.Vector TH.ExpQ -> TH.ExpQ
 acceptSwitchExp acceptMap = do
   acceptIdName <- TH.newName "acceptId"
   bsName <- TH.newName "bs"
+  arrOffName <- TH.newName "arrOff"
   startName <- TH.newName "start"
   endName <- TH.newName "end"
   let matches = flip map (zip [0 :: Int ..] $ VB.toList acceptMap) \(i, exp) -> do
@@ -59,11 +77,14 @@ acceptSwitchExp acceptMap = do
           ( TH.normalB
               [|
                 $exp
-                  LexerInput#
-                    { inputArr# = $(TH.varE bsName),
-                      inputStart# = $(TH.varE startName),
-                      inputEnd# = $(TH.varE endName)
-                    }
+                  ( LI
+                      LexerInput#
+                        { inputArr# = $(TH.varE bsName),
+                          inputArrOff# = $(TH.varE arrOffName),
+                          inputStart# = $(TH.varE startName),
+                          inputEnd# = $(TH.varE endName)
+                        }
+                  )
                 |]
           )
           []
@@ -74,7 +95,7 @@ acceptSwitchExp acceptMap = do
         )
   [|
     \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: LexerState#) -> withLexerState $ \($(TH.varP startName)) ->
-      withLexerEnv $ \LexerEnv {arr# = $(TH.varP bsName)} -> do
+      withLexerEnv $ \LexerEnv {arr# = $(TH.varP bsName), arrOff# = $(TH.varP arrOffName)} -> do
         setLexerState $(TH.varE endName)
         $(caseExpr)
     |]

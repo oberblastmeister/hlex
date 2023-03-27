@@ -17,25 +17,56 @@ import GHC.Exts (Int (..), Int#, (+#), (-#))
 import GHC.Exts qualified as Exts
 import Ilex.Internal.ByteString (unpackByteString)
 
-newtype LexerInput# = LexerInput## (# ByteArray#, LexerState#, LexerState# #)
+newtype LexerInput# = LexerInput## (# ByteArray#, Int#, LexerState#, LexerState# #)
 
-pattern LexerInput# :: ByteArray# -> LexerState# -> LexerState# -> LexerInput#
-pattern LexerInput# {inputArr#, inputStart#, inputEnd#} = LexerInput## (# inputArr#, inputStart#, inputEnd# #)
+pattern LexerInput# :: ByteArray# -> Int# -> LexerState# -> LexerState# -> LexerInput#
+pattern LexerInput# {inputArr#, inputArrOff#, inputStart#, inputEnd#} = LexerInput## (# inputArr#, inputArrOff#, inputStart#, inputEnd# #)
 
 {-# COMPLETE LexerInput# #-}
 
-inputText :: LexerInput# -> Text
+data Pos = Pos
+  { bytePos :: !Int,
+    charPos :: !Int
+  }
+
+data LexerInput = LI LexerInput#
+
+inputText :: LexerInput -> Text
 inputText
-  LexerInput#
-    { inputArr#,
-      inputStart# = LexerState {off#},
-      inputEnd# = LexerState {off# = endOff#}
-    } =
+  ( LI
+      LexerInput#
+        { inputArr#,
+          inputStart# = LexerState {off#},
+          inputEnd# = LexerState {off# = endOff#}
+        }
+    ) =
     Data.Text.Internal.Text
       (Data.Text.Array.ByteArray inputArr#)
       (I# off#)
       (I# (endOff# -# off#))
 {-# INLINE inputText #-}
+
+inputStart :: LexerInput -> Pos
+inputStart
+  ( LI
+      LexerInput#
+        { inputArrOff#,
+          inputStart# = LexerState {off#, charOff#}
+        }
+    ) =
+    Pos {bytePos = I# (off# -# inputArrOff#), charPos = I# charOff#}
+{-# INLINE inputStart #-}
+
+inputEnd :: LexerInput -> Pos
+inputEnd
+  ( LI
+      LexerInput#
+        { inputArrOff#,
+          inputEnd# = LexerState {off#, charOff#}
+        }
+    ) =
+    Pos {bytePos = I# (off# -# inputArrOff#), charPos = I# charOff#}
+{-# INLINE inputEnd #-}
 
 newtype LexerEnv# = LexerEnv# (# ByteArray#, Int#, Int# #)
 

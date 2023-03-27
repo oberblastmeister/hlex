@@ -6,15 +6,17 @@ module SimpleTest where
 
 import Ilex ((~=))
 import Ilex qualified
-import Ilex.Internal.Monad (Lex)
+import Ilex.Internal.Monad (Lex, LexerInput)
 import Test.Tasty
+
+tok :: a -> LexerInput -> Lex () a
+tok = const . pure
 
 testing :: Lex () Int
 testing =
-  $( Ilex.lex [|pure 0|] [|pure 1|] $ do
-       "abc" ~= [|pure 3|]
-
-       "ab" ~= [|pure 2|]
+  $( Ilex.lex [|tok 0|] [|tok 1|] $ do
+       "abc" ~= [|tok 3|]
+       "ab" ~= [|tok 2|]
    )
 
 tests :: TestTree

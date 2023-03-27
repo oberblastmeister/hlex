@@ -61,13 +61,9 @@ codegen config dfa = do
 
       infoTable = $(liftStorableVectorToAddr# $ generateInfoTable dfa)
 
-      runOnError (end :: LexerState#) = do
-        setLexerState end
-        $(onError config)
+      runOnError = $(withInpExp (onError config))
 
-      runOnEof (end :: LexerState#) = do
-        setLexerState end
-        $(onEof config)
+      runOnEof = $(withInpExp (onEof config))
 
       loop (stateId :: Int#) (lexerState :: LexerState#) (lastMatch :: LastMatch#) =
         withLexerEnv $ \LexerEnv {arr#, endOff#} ->
