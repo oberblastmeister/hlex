@@ -43,6 +43,9 @@ common common-options
     DerivingVia,
     PartialTypeSignatures,
     BlockArguments,
+    MagicHash,
+    UnboxedTuples,
+    UnliftedNewtypes,
   ghc-options:
     -Wall
     -Wredundant-constraints
@@ -79,8 +82,9 @@ library
       Ilex.Regex
         Ilex.Internal.Monad
         Ilex.Internal.CharSet
-        Ilex.Internal.Backend.Fun
-        Ilex.Internal.Backend.Table
+        Ilex.Internal.Backend
+          Ilex.Internal.Backend.Fun
+          Ilex.Internal.Backend.Table
         Ilex.Internal.Utf8
         Ilex.Internal.Utils
         Ilex.Internal.Dfa

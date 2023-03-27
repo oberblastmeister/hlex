@@ -63,17 +63,19 @@ lexer = do
        "=" ~= [|pure Eq|]
        "==" ~= [|pure EqEq|]
        "/=" ~= [|pure Neq|]
+
        "\\" ~= [|pure Lam|]
-       "+" ~= [|pure Plus|]
+
+      --  "+" ~= [|pure Plus|]
        "-" ~= [|pure Minus|]
        "*" ~= [|pure Mul|]
        "/" ~= [|pure Div|]
        "(" ~= [|pure Lparen|]
        ")" ~= [|pure Rparen|]
        "." ~= [|pure Dot|]
-       (RE.some RE.num) ~> [|\i -> pure $ Num $ Ilex.inputText i|]
-       (RE.some RE.alpha) ~> [|\i -> pure $ Ident $ Ilex.inputText i|]
-       (RE.cat ["--", RE.many RE.dot]) ~= [|lexer|]
+       RE.some RE.num ~> [|\i -> pure $ Num $ Ilex.inputText i|]
+       RE.some RE.alpha ~> [|\i -> pure $ Ident $ Ilex.inputText i|]
+       RE.cat ["--", RE.many RE.dot] ~= [|lexer|]
        RE.isSpace ~= [|lexer|]
    )
 
@@ -105,8 +107,7 @@ tests =
   testGroup
     "LexerTest"
     [ HU.testCase "testing" $ do
-        let ((), ts) = runLexText " bruh --             " () lexAll
-        -- let ((), ts) = runLexText "forall        if let rec in if then else true false" () lexAll
+        let ((), ts) = runLexText "let bruh = 1234 in True" () lexAll
         print ts
         pure ()
     ]

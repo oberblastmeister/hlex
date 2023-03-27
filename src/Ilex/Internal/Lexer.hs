@@ -6,9 +6,7 @@ module Ilex.Internal.Lexer where
 import Control.Monad.Writer.CPS (MonadWriter, Writer)
 import Control.Monad.Writer.CPS qualified as Writer
 import Data.Monoid (Dual (..))
-import Data.Primitive (ByteArray#)
-import GHC.Exts (Int#)
-import Ilex.Internal.Monad (LexerInput#, LexerState#)
+import Ilex.Internal.Monad (LexerInput#)
 import Ilex.Internal.Regex
 import Language.Haskell.TH qualified as TH
 
