@@ -61,7 +61,7 @@ common common-options
     -Widentities
   build-depends:
     base >= 4.12 && <5,
-    text ^>= 2.0,
+    text >= 2.0,
     bytestring,
     template-haskell >= 2.18.0.0,
     unordered-containers,

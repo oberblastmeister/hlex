@@ -19,7 +19,6 @@ import Ilex.Internal.Nfa (Nfa (Nfa))
 import Ilex.Internal.Nfa qualified as Nfa
 import Ilex.Internal.Regex qualified as RE
 import Ilex.Internal.Rule (Rule (..))
-import Ilex.Internal.Rule qualified as Rule
 import Ilex.Internal.Utf8
 import Ilex.Internal.Utils
 import Numeric.Interval.NonEmpty ((...))
@@ -63,16 +62,8 @@ regexToNfa accept regex = Nfa {Nfa.start, Nfa.states = VB.fromListN (PVec.length
 
 regexToNfa' :: MonadNfa a m => Int -> Int -> RE.Regex -> m ()
 regexToNfa' from to = \case
-  -- RE.Empty -> emptyEdge from to
   RE.Cat rs -> catToNfa from to rs regexToNfa'
   RE.Alt rs -> altToNfa from to (NE.toList rs) regexToNfa'
-  -- RE.Cat r1 r2 -> do
-  --   s <- freshState
-  --   regexToNfa' from s r1
-  --   regexToNfa' s to r2
-  -- RE.Alt r1 r2 -> do
-  --   regexToNfa' from to r1
-  --   regexToNfa' from to r2
   RE.Set set -> charSetEdge from to set
   RE.Rep r -> do
     s <- freshState

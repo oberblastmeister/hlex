@@ -1,5 +1,5 @@
 module Ilex.Internal.CharSet
-  ( CharSet(..),
+  ( CharSet (..),
     empty,
     singleton,
     insert,

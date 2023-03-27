@@ -6,7 +6,6 @@ module Ilex.Internal.Rule where
 import Control.Monad.Writer.CPS (MonadWriter, Writer)
 import Control.Monad.Writer.CPS qualified as Writer
 import Data.Monoid (Dual (..))
-import Ilex.Internal.Monad (LexerInput)
 import Ilex.Internal.Regex
 import Language.Haskell.TH qualified as TH
 
