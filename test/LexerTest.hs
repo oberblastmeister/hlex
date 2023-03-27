@@ -10,9 +10,7 @@
 module LexerTest where
 
 import Data.Text (Text)
-import Ilex ((~=))
-import Ilex qualified
-import Ilex.Internal.Monad (Lex, LexerInput, getCharPos, runLexText)
+import Ilex
 import Ilex.Regex qualified as RE
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HU
@@ -43,14 +41,12 @@ data Token
   | Eof
   | Num !Text
   | Ident !Text
+  | Comment
   deriving (Show, Eq)
-
-tok :: Token -> LexerInput -> Lex () Token
-tok = const . pure
 
 lexer :: Lex () Token
 lexer = do
-  $( Ilex.lex [|tok Error|] [|tok Eof|] $ do
+  $( ilex [|tok Error|] [|tok Eof|] $ do
        "forall" ~= [|tok Forall|]
        "if" ~= [|tok If|]
        "let" ~= [|tok Let|]
@@ -75,8 +71,10 @@ lexer = do
        "." ~= [|tok Dot|]
        RE.some RE.num ~= [|pure . Num . Ilex.inputText|]
        RE.some RE.alpha ~= [|pure . Ident . Ilex.inputText|]
-       RE.cat ["--", RE.many RE.dot] ~= [|const lexer|]
+       RE.cat ["--", RE.many RE.dot] ~= [|tok Comment|]
+       RE.cat ["{-", RE.many RE.dot, "-}"] ~= [|tok Comment|]
        RE.isSpace ~= [|const lexer|]
+       "\n" ~= [|const lexer|]
    )
 
 data Span = Span
@@ -90,6 +88,9 @@ data Spanned a = Spanned
     value :: a
   }
   deriving (Show, Eq)
+
+getCharPos :: Lex () Int
+getCharPos = charPos <$> getPos
 
 lexAll :: Lex () [Spanned Token]
 lexAll = do
@@ -107,7 +108,7 @@ tests =
   testGroup
     "LexerTest"
     [ HU.testCase "testing" $ do
-        let ((), ts) = runLexText "let bruh = 1234 in True" () lexAll
+        let ((), ts) = runLexText "let {- asdf -} bruh\n=\n1234 in True" () lexAll
         print ts
         pure ()
     ]

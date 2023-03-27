@@ -11,9 +11,9 @@ import qualified Ilex.Internal.Backend as Backend
 import qualified Ilex.Internal.Backend.Table as Backend.Table
 import qualified Ilex.Internal.Backend.Fun as Backend.Fun
 
-lex :: TH.ExpQ -> TH.ExpQ -> Lexer.LexerBuilder TH.ExpQ () -> TH.ExpQ
-lex onError onEof builder =
-  Backend.Fun.codegen
+ilex :: TH.ExpQ -> TH.ExpQ -> Lexer.LexerBuilder TH.ExpQ () -> TH.ExpQ
+ilex onError onEof builder =
+  Backend.Table.codegen
     Backend.BackendConfig
       { acceptMap,
         onError,

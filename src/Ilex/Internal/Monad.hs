@@ -31,6 +31,14 @@ data Pos = Pos
 
 data LexerInput = LI LexerInput#
 
+getPos :: MonadLexer m => m Pos
+getPos = withLexerState \LexerState {off#, charOff#} -> do
+  withLexerEnv \LexerEnv {arrOff#} -> do
+    let bytePos = I# (off# -# arrOff#)
+    let charPos = I# charOff#
+    pure Pos {bytePos, charPos}
+{-# INLINE getPos #-}
+
 inputText :: LexerInput -> Text
 inputText
   ( LI
@@ -163,3 +171,7 @@ instance MonadLexer (Lex s) where
   {-# INLINE withLexerState #-}
   setLexerState ls = Lex \_env _ s -> (# ls, s, () #)
   {-# INLINE setLexerState #-}
+
+tok :: Applicative m => a -> LexerInput -> m a
+tok = const . pure
+{-# INLINE tok #-}
