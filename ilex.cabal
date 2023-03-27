@@ -113,6 +113,7 @@ test-suite ilex-test
   main-is: Main.hs
   other-modules:
     LexerUtils
+    TestUtils
     MinimizeTest
     LexerTest
     RegexTest
@@ -122,8 +123,11 @@ test-suite ilex-test
     ilex,
     tasty,
     tasty-hedgehog,
+    tasty-golden,
     hedgehog,
     tasty-hunit,
+    pretty-simple,
+    filepath,
 
 benchmark ilex-bench
   import: common-options, rtsopts

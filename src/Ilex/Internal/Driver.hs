@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Ilex.Internal.Driver where
 
 import Data.Vector qualified as VB

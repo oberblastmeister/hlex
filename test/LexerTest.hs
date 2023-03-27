@@ -9,11 +9,14 @@
 
 module LexerTest where
 
+import Control.Monad.Except qualified as Except
 import Data.Text (Text)
+import Data.Text qualified as T
 import Ilex
-import Ilex.Regex qualified as RE
+import Ilex.Regex qualified as R
+import LexerUtils
 import Test.Tasty
-import Test.Tasty.HUnit qualified as HU
+import TestUtils
 
 data Token
   = Forall
@@ -23,8 +26,6 @@ data Token
   | If
   | Then
   | Else
-  | TTrue
-  | TFalse
   | Arrow
   | Eq
   | EqEq
@@ -37,16 +38,18 @@ data Token
   | Lparen
   | Rparen
   | Dot
-  | Error
+  | Error !Text
   | Eof
   | Num !Text
   | Ident !Text
-  | Comment
+  | ConIdent !Text
+  | Comment !Text
+  | String !Text
   deriving (Show, Eq)
 
-lexer :: Lex () Token
+lexer :: Lex () (Spanned Token)
 lexer = do
-  $( ilex [|tok Error|] [|tok Eof|] $ do
+  $( ilex [|tok $ Error "unknown"|] [|tok Eof|] $ do
        "forall" ~= [|tok Forall|]
        "if" ~= [|tok If|]
        "let" ~= [|tok Let|]
@@ -55,8 +58,6 @@ lexer = do
        "if" ~= [|tok If|]
        "then" ~= [|tok Then|]
        "else" ~= [|tok Else|]
-       "true" ~= [|tok TTrue|]
-       "false" ~= [|tok TFalse|]
        "->" ~= [|tok Arrow|]
        "=" ~= [|tok Eq|]
        "==" ~= [|tok EqEq|]
@@ -69,46 +70,70 @@ lexer = do
        "(" ~= [|tok Lparen|]
        ")" ~= [|tok Rparen|]
        "." ~= [|tok Dot|]
-       RE.some RE.num ~= [|pure . Num . Ilex.inputText|]
-       RE.some RE.alpha ~= [|pure . Ident . Ilex.inputText|]
-       RE.cat ["--", RE.many RE.dot] ~= [|tok Comment|]
-       RE.cat ["{-", RE.many RE.dot, "-}"] ~= [|tok Comment|]
-       RE.isSpace ~= [|const lexer|]
-       "\n" ~= [|const lexer|]
+       R.cat [rLower, R.many rIdent] ~= [|spanned $ Ident . Ilex.inputText|]
+       R.cat [rUpper, R.many rIdent] ~= [|spanned $ ConIdent . Ilex.inputText|]
+       R.some R.digit ~= [|spanned $ Num . Ilex.inputText|]
+       R.cat ["--", R.many R.dot] ~= [|comment|]
+       R.cat ["{-", R.many $ R.alt [R.dot, "\n"], "-}"] ~= [|comment|]
+       R.some R.isSpace ~= [|skip|]
+       R.some "\n" ~= [|skip|]
+       "\""
+         ~= [|
+           \i -> do
+             let start = inputStart i
+             res <- Except.runExceptT $ lexString ['"']
+             end <- getPos
+             pure $ Spanned (Span start end) $ case res of
+               Left e -> Error e
+               Right x -> String x
+           |]
    )
-
-data Span = Span
-  { start :: !Int,
-    end :: !Int
-  }
-  deriving (Show, Eq)
-
-data Spanned a = Spanned
-  { span :: {-# UNPACK #-} !Span,
-    value :: a
-  }
-  deriving (Show, Eq)
-
-getCharPos :: Lex () Int
-getCharPos = charPos <$> getPos
+  where
+    lexString cs =
+      $( ilex [|\_ -> Except.throwError "unsupposed string character"|] [|\_ -> Except.throwError "unclosed string"|] $ do
+           "\"" ~= [|\_ -> pure $! T.pack $ reverse $ '"' : cs|]
+           "\\n" ~= [|addChar '\n'|]
+           "\\t" ~= [|addChar '\t'|]
+           "\\\\" ~= [|addChar '\\'|]
+           "\\a" ~= [|addChar '\a'|]
+           R.cat ["\\", R.dot] ~= [|\_ -> Except.throwError "invalid escape sequence"|]
+           R.dot
+             ~= [|
+               \i -> do
+                 let t = Ilex.inputText i
+                 case T.uncons t of
+                   Nothing -> error "impossible"
+                   Just (c, _) -> lexString $ c : cs
+               |]
+       )
+      where
+        addChar c _i = lexString $ c : cs
+    skip = const lexer
+    comment = spanned $ Comment . inputText
 
 lexAll :: Lex () [Spanned Token]
 lexAll = do
-  start <- getCharPos
   t <- lexer
-  end <- getCharPos
-  case t of
-    Eof -> pure [Spanned (Span start end) Eof]
+  case value t of
+    Eof -> pure [t]
     _ -> do
       ts <- lexAll
-      pure $ Spanned (Span start end) t : ts
+      pure $ t : ts
 
 tests :: TestTree
 tests =
   testGroup
     "LexerTest"
-    [ HU.testCase "testing" $ do
-        let ((), ts) = runLexText "let {- asdf -} bruh\n=\n1234 in True" () lexAll
-        print ts
-        pure ()
+    [ golden "smoke" do
+        let ((), ts) = lexText lexAll "let {-😀-}  bru234h \n=\n1234 in True" () 
+        pure ts,
+      golden "strings" do
+        let ((), ts) = lexText lexAll "let str = \"🤣\\aa\\ts\\ndf\" in str" ()
+        pure ts,
+      golden "invalid_escapes" do
+        let ((), ts) = lexText lexAll "\"\\z\\y\\u\" ." ()
+        pure ts
     ]
+
+golden :: Show a => String -> IO a -> TestTree
+golden = testGoldenInShow "LexerTest"

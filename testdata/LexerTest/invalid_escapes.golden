@@ -1,0 +1,92 @@
+[ Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 0
+            , charPos = 0
+            }
+        , end = Pos
+            { bytePos = 3
+            , charPos = 3
+            }
+        }
+    , value = Error "invalid escape sequence"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 3
+            , charPos = 3
+            }
+        , end = Pos
+            { bytePos = 4
+            , charPos = 4
+            }
+        }
+    , value = Lam
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 4
+            , charPos = 4
+            }
+        , end = Pos
+            { bytePos = 5
+            , charPos = 5
+            }
+        }
+    , value = Ident "y"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 5
+            , charPos = 5
+            }
+        , end = Pos
+            { bytePos = 6
+            , charPos = 6
+            }
+        }
+    , value = Lam
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 6
+            , charPos = 6
+            }
+        , end = Pos
+            { bytePos = 7
+            , charPos = 7
+            }
+        }
+    , value = Ident "u"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 7
+            , charPos = 7
+            }
+        , end = Pos
+            { bytePos = 10
+            , charPos = 10
+            }
+        }
+    , value = Error "unclosed string"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 10
+            , charPos = 10
+            }
+        , end = Pos
+            { bytePos = 10
+            , charPos = 10
+            }
+        }
+    , value = Eof
+    }
+]

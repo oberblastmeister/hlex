@@ -13,6 +13,5 @@ import Ilex.Internal.Monad as X
     inputEnd,
     inputStart,
     inputText,
-    runLexText,
-    tok,
+    lexText,
   )

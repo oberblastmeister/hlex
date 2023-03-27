@@ -1,0 +1,27 @@
+[ Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 0
+            , charPos = 0
+            }
+        , end = Pos
+            { bytePos = 1
+            , charPos = 1
+            }
+        }
+    , value = String ""asdf""
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 6
+            , charPos = 6
+            }
+        , end = Pos
+            { bytePos = 6
+            , charPos = 6
+            }
+        }
+    , value = Eof
+    }
+]

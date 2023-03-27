@@ -112,8 +112,8 @@ dot =
 alpha :: Regex
 alpha = set $ CharSet.singletonRange ('a', 'z') <> CharSet.singletonRange ('A', 'Z')
 
-num :: Regex
-num = range ('0', '9')
+digit :: Regex
+digit = range ('0', '9')
 
 isSpace :: Regex
 isSpace = when Char.isSpace

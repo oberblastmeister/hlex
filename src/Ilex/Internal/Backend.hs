@@ -15,6 +15,10 @@ import Data.Word (Word8)
 import GHC.Exts (Int#)
 import Ilex.Internal.Monad
 import Language.Haskell.TH qualified as TH
+import Data.Proxy (Proxy)
+
+testing :: forall a. Show a => Proxy a -> TH.CodeQ String
+testing _ = [||show (undefined :: a)||]
 
 newtype LastMatch# = LastMatch# (# (# #) | (# Int#, LexerState# #) #)
 

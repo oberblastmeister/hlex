@@ -6,8 +6,13 @@
 
 module Ilex.Internal.Monad where
 
+import Control.Monad.Except qualified as Except
+import Control.Monad.Reader qualified as Reader
 import Control.Monad.State (MonadState (..))
+import Control.Monad.State.Lazy qualified as Lazy
+import Control.Monad.State.Strict qualified as Strict
 import Data.ByteString (ByteString)
+import Data.Functor (($>))
 import Data.Primitive (ByteArray#)
 import Data.Primitive qualified as Primitive
 import Data.Text (Text)
@@ -15,6 +20,7 @@ import Data.Text.Array qualified
 import Data.Text.Internal qualified
 import GHC.Exts (Int (..), Int#, (+#), (-#))
 import GHC.Exts qualified as Exts
+import GHC.Generics (Generic)
 import Ilex.Internal.ByteString (unpackByteString)
 
 newtype LexerInput# = LexerInput## (# ByteArray#, Int#, LexerState#, LexerState# #)
@@ -28,6 +34,7 @@ data Pos = Pos
   { bytePos :: !Int,
     charPos :: !Int
   }
+  deriving (Show, Eq, Ord, Generic)
 
 data LexerInput = LI LexerInput#
 
@@ -111,6 +118,38 @@ class Monad m => MonadLexer m where
   withLexerState :: (LexerState# -> m a) -> m a
   setLexerState :: LexerState# -> m ()
 
+instance MonadLexer m => MonadLexer (Lazy.StateT s m) where
+  withLexerEnv f = Lazy.StateT \s -> withLexerEnv \le -> Lazy.runStateT (f le) s
+  withLexerState f = Lazy.StateT \s -> withLexerState \ls -> Lazy.runStateT (f ls) s
+  setLexerState ls = Lazy.StateT \s -> setLexerState ls $> ((), s)
+  {-# INLINE withLexerEnv #-}
+  {-# INLINE withLexerState #-}
+  {-# INLINE setLexerState #-}
+
+instance MonadLexer m => MonadLexer (Strict.StateT s m) where
+  withLexerEnv f = Strict.StateT \s -> withLexerEnv \le -> Strict.runStateT (f le) s
+  withLexerState f = Strict.StateT \s -> withLexerState \ls -> Strict.runStateT (f ls) s
+  setLexerState ls = Strict.StateT \s -> setLexerState ls $> ((), s)
+  {-# INLINE withLexerEnv #-}
+  {-# INLINE withLexerState #-}
+  {-# INLINE setLexerState #-}
+
+instance MonadLexer m => MonadLexer (Except.ExceptT e m) where
+  withLexerEnv f = Except.ExceptT $ withLexerEnv \le -> Except.runExceptT $ f le
+  withLexerState f = Except.ExceptT $ withLexerState \ls -> Except.runExceptT $ f ls
+  setLexerState ls = Except.ExceptT $ setLexerState ls $> Right ()
+  {-# INLINE withLexerEnv #-}
+  {-# INLINE withLexerState #-}
+  {-# INLINE setLexerState #-}
+
+instance MonadLexer m => MonadLexer (Reader.ReaderT r m) where
+  withLexerEnv f = Reader.ReaderT \r -> withLexerEnv \le -> Reader.runReaderT (f le) r
+  withLexerState f = Reader.ReaderT \r -> withLexerState \ls -> Reader.runReaderT (f ls) r
+  setLexerState ls = Reader.ReaderT \_ -> setLexerState ls
+  {-# INLINE withLexerEnv #-}
+  {-# INLINE withLexerState #-}
+  {-# INLINE setLexerState #-}
+  
 getCharPos :: MonadLexer m => m Int
 getCharPos = withLexerState \LexerState {charOff#} -> pure (I# charOff#)
 {-# INLINE getCharPos #-}
@@ -119,13 +158,13 @@ getBytePos :: MonadLexer m => m Int
 getBytePos = withLexerState \LexerState {off#} -> pure (I# off#)
 {-# INLINE getBytePos #-}
 
-runLexText :: Text -> s -> Lex s a -> (s, a)
-runLexText (Data.Text.Internal.Text (Data.Text.Array.ByteArray bs) (I# off#) (I# len#)) s (Lex f) =
+lexText :: Lex s a -> Text -> s -> (s, a)
+lexText (Lex f) (Data.Text.Internal.Text (Data.Text.Array.ByteArray bs) (I# off#) (I# len#)) s =
   case f (LexerEnv {arr# = bs, endOff# = off# +# len#, arrOff# = off#}) (LexerState {off# = off#, charOff# = 0#}) s of
     (# _, s, a #) -> (s, a)
 
-runLexByteString :: ByteString -> s -> Lex s a -> (s, a)
-runLexByteString bytestring s (Lex f) =
+lexByteString :: Lex s a -> ByteString -> s -> (s, a)
+lexByteString (Lex f) bytestring s =
   case f (LexerEnv {arr# = bs, endOff# = endOff#, arrOff# = off#}) (LexerState {off# = off#, charOff# = 0#}) s of
     (# _, s, a #) -> (s, a)
   where
@@ -171,7 +210,3 @@ instance MonadLexer (Lex s) where
   {-# INLINE withLexerState #-}
   setLexerState ls = Lex \_env _ s -> (# ls, s, () #)
   {-# INLINE setLexerState #-}
-
-tok :: Applicative m => a -> LexerInput -> m a
-tok = const . pure
-{-# INLINE tok #-}

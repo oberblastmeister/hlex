@@ -1,0 +1,105 @@
+[ Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 0
+            , charPos = 0
+            }
+        , end = Pos
+            { bytePos = 3
+            , charPos = 3
+            }
+        }
+    , value = Let
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 4
+            , charPos = 4
+            }
+        , end = Pos
+            { bytePos = 12
+            , charPos = 9
+            }
+        }
+    , value = Comment "{-😀-}"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 14
+            , charPos = 11
+            }
+        , end = Pos
+            { bytePos = 21
+            , charPos = 18
+            }
+        }
+    , value = Ident "bru234h"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 23
+            , charPos = 20
+            }
+        , end = Pos
+            { bytePos = 24
+            , charPos = 21
+            }
+        }
+    , value = Eq
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 25
+            , charPos = 22
+            }
+        , end = Pos
+            { bytePos = 29
+            , charPos = 26
+            }
+        }
+    , value = Num "1234"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 30
+            , charPos = 27
+            }
+        , end = Pos
+            { bytePos = 32
+            , charPos = 29
+            }
+        }
+    , value = In
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 33
+            , charPos = 30
+            }
+        , end = Pos
+            { bytePos = 37
+            , charPos = 34
+            }
+        }
+    , value = ConIdent "True"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 37
+            , charPos = 34
+            }
+        , end = Pos
+            { bytePos = 37
+            , charPos = 34
+            }
+        }
+    , value = Eof
+    }
+]
