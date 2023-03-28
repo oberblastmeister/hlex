@@ -6,6 +6,7 @@
 
 module Ilex.Internal.Monad where
 
+import Control.Monad.Cont qualified as Cont
 import Control.Monad.Except qualified as Except
 import Control.Monad.Reader qualified as Reader
 import Control.Monad.State (MonadState (..))
@@ -149,7 +150,15 @@ instance MonadLexer m => MonadLexer (Reader.ReaderT r m) where
   {-# INLINE withLexerEnv #-}
   {-# INLINE withLexerState #-}
   {-# INLINE setLexerState #-}
-  
+
+instance MonadLexer m => MonadLexer (Cont.ContT r m) where
+  withLexerEnv f = Cont.ContT \c -> withLexerEnv \le -> Cont.runContT (f le) c
+  withLexerState f = Cont.ContT \c -> withLexerState \ls -> Cont.runContT (f ls) c
+  setLexerState ls = Cont.ContT \c -> setLexerState ls *> c ()
+  {-# INLINE withLexerEnv #-}
+  {-# INLINE withLexerState #-}
+  {-# INLINE setLexerState #-}
+
 getCharPos :: MonadLexer m => m Int
 getCharPos = withLexerState \LexerState {charOff#} -> pure (I# charOff#)
 {-# INLINE getCharPos #-}

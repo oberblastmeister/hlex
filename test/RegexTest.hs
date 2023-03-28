@@ -25,6 +25,7 @@ import Ilex.Internal.Regex qualified as RE
 import Ilex.Internal.RegexToNfa qualified as RegexToNfa
 import Ilex.Internal.Utf8
 import Ilex.Internal.Utils
+import qualified Data.List.NonEmpty as NE
 
 genRegexWith :: Gen Char -> Gen Regex
 genRegexWith genChar = go
@@ -59,7 +60,7 @@ prop_match_string = property do
   accept <- forAll $ Gen.int (Range.linear 0 100)
   let r = RE.string s1
   let nfa = RegexToNfa.regexToNfa accept r
-  let dfa' = NfaToDfa.nfaToDfa nfa
+  let dfa' = NE.head <$> NfaToDfa.nfaToDfa nfa
   let dfa = Minimize.minimize dfa'
   annotateShow nfa
   annotateShow dfa
@@ -122,7 +123,7 @@ predicatesProperty pred = property do
   where
     r = RE.when' pred
     nfa = RegexToNfa.regexToNfa () r
-    dfa = NfaToDfa.nfaToDfa nfa
+    dfa = NE.head <$> NfaToDfa.nfaToDfa nfa
     minDfa = Minimize.minimize dfa
     ranges = CharSet.fromPred pred
     cs = CharSet.toList ranges

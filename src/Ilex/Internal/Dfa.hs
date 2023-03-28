@@ -19,6 +19,7 @@ module Ilex.Internal.Dfa
     emptyState,
     simulate,
     valid,
+    accepts,
   )
 where
 
@@ -32,7 +33,8 @@ import Data.Hashable (Hashable)
 import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Data.IntSet (IntSet)
-import Data.Maybe (fromJust)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (fromList)
@@ -41,7 +43,9 @@ import Ilex.Internal.AssocList (AssocList)
 -- dfa using sets of nfa states
 type Pdfa = Dfa' (HashMap StateSet) StateSet
 
-type Dfa = Dfa' VB.Vector Int
+type StateId = Int
+
+type Dfa = Dfa' VB.Vector StateId
 
 type State = State' Int
 
@@ -62,6 +66,16 @@ instance Functor f => Bifunctor (Dfa' f) where
         states = fmap (bimap f g) states
       }
 
+instance Functor f => Functor (Dfa' f s) where
+  fmap f dfa@Dfa {states} = dfa {states = (fmap . fmap) f states}
+
+instance Foldable f => Foldable (Dfa' f s) where
+  foldMap f Dfa {states} = foldMap (foldMap f) states
+
+instance Traversable f => Traversable (Dfa' f s) where
+  traverse f dfa@Dfa {states} =
+    (\states -> dfa {states}) <$> (traverse . traverse) f states
+
 data State' s a = State
   { transitions :: !(IntMap s),
     isCharEnd :: !Bool,
@@ -73,12 +87,24 @@ type PState = State' StateSet
 
 type StateSet = IntSet
 
+instance Foldable (State' s) where
+  foldMap f State {accept} = foldMap f accept
+
+instance Functor (State' s) where
+  fmap f state@State {accept} = state {accept = fmap f accept}
+
 instance Bifunctor State' where
   bimap f g state@State {transitions, accept} =
     state
       { transitions = fmap f transitions,
         accept = fmap g accept
       }
+
+instance Traversable (State' s) where
+  traverse f state@State {accept} = (\accept -> state {accept}) <$> traverse f accept
+
+accepts :: Dfa a -> [a]
+accepts Dfa {states} = mapMaybe accept $ VB.toList states
 
 valid :: Dfa a -> Bool
 valid Dfa {start, states} = validStateId start && all validState states

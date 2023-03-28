@@ -31,7 +31,7 @@ pattern SomeLastMatch# {lastMatchAccept#, lastMatchEnd#} = LastMatch# (# | (# la
 {-# COMPLETE NoLastMatch#, SomeLastMatch# #-}
 
 data BackendConfig = BackendConfig
-  { acceptMap :: VB.Vector TH.ExpQ,
+  { 
     onError :: TH.ExpQ,
     onEof :: TH.ExpQ
   }

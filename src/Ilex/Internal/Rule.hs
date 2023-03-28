@@ -9,7 +9,14 @@ import Data.Monoid (Dual (..))
 import Ilex.Internal.Regex
 import Language.Haskell.TH qualified as TH
 
-newtype RuleBuilder a b = RuleBuilder
+data Accept = Accept
+  { exp :: TH.ExpQ,
+    context :: [TH.ExpQ]
+  }
+
+type RuleBuilder = RuleBuilder' Accept
+
+newtype RuleBuilder' a b = RuleBuilder
   { runLexerBuilder :: Writer (Dual [Rule a]) b
   }
   deriving
@@ -19,13 +26,20 @@ newtype RuleBuilder a b = RuleBuilder
 data Rule a = Rule
   { regex :: Regex,
     accept :: a
-  }
+  } deriving (Functor)
 
-rule :: Regex -> TH.ExpQ -> RuleBuilder TH.ExpQ ()
-rule regex accept = Writer.tell $ Dual [Rule {regex, accept}]
+rule :: Regex -> TH.ExpQ -> RuleBuilder ()
+rule regex exp = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context = []}}]
 
-(~=) :: Regex -> TH.ExpQ -> RuleBuilder TH.ExpQ ()
+data Context
+  = ContextRegex Regex
+  | ContextPred TH.ExpQ
+
+ruleContext :: Regex -> (TH.ExpQ, [TH.ExpQ]) -> RuleBuilder ()
+ruleContext regex (exp, context) = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context}}]
+
+(~=) :: Regex -> TH.ExpQ -> RuleBuilder ()
 (~=) = rule
 
-evalRuleBuilder :: RuleBuilder a () -> [Rule a]
+evalRuleBuilder :: RuleBuilder () -> [Rule Accept]
 evalRuleBuilder = reverse . getDual . Writer.execWriter . runLexerBuilder

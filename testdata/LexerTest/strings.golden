@@ -5,21 +5,87 @@
             , charPos = 0
             }
         , end = Pos
-            { bytePos = 1
-            , charPos = 1
+            { bytePos = 3
+            , charPos = 3
             }
         }
-    , value = String ""asdf""
+    , value = Let
     }
 , Spanned
     { span = Span
         { start = Pos
-            { bytePos = 6
-            , charPos = 6
+            { bytePos = 4
+            , charPos = 4
             }
         , end = Pos
-            { bytePos = 6
-            , charPos = 6
+            { bytePos = 7
+            , charPos = 7
+            }
+        }
+    , value = Ident "str"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 8
+            , charPos = 8
+            }
+        , end = Pos
+            { bytePos = 9
+            , charPos = 9
+            }
+        }
+    , value = Eq
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 10
+            , charPos = 10
+            }
+        , end = Pos
+            { bytePos = 26
+            , charPos = 23
+            }
+        }
+    , value = String ""🤣\x7a\x9s
+      df""
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 27
+            , charPos = 24
+            }
+        , end = Pos
+            { bytePos = 29
+            , charPos = 26
+            }
+        }
+    , value = In
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 30
+            , charPos = 27
+            }
+        , end = Pos
+            { bytePos = 33
+            , charPos = 30
+            }
+        }
+    , value = Ident "str"
+    }
+, Spanned
+    { span = Span
+        { start = Pos
+            { bytePos = 33
+            , charPos = 30
+            }
+        , end = Pos
+            { bytePos = 33
+            , charPos = 30
             }
         }
     , value = Eof

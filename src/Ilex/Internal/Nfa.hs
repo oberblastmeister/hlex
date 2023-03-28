@@ -13,6 +13,7 @@ module Ilex.Internal.Nfa
     transitionMapClosure,
     valid,
     chooseIsCharEnd,
+    listAccepts,
   )
 where
 
@@ -31,9 +32,9 @@ import Data.List.NonEmpty qualified as NE
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (toList)
-import Numeric.Interval.NonEmpty qualified as I
 import Ilex.Internal.Utf8 (Utf8Range)
 import Ilex.Internal.Utils
+import Numeric.Interval.NonEmpty qualified as I
 
 type StateId = Int
 
@@ -64,6 +65,13 @@ valid Nfa {start, states} = validStateId start && all validState (VB.toList stat
         && all validStateId (IntSet.toList emptyTransitions)
     validTransition (_, to) = validStateId to
     validStateId s = s >= 0 && s < VB.length states
+
+listAccepts :: StateSet -> Nfa a -> [a]
+listAccepts ss nfa =
+  [ acc
+    | s <- IntSet.toList ss,
+      acc <- nfa & states & (VB.! s) & accept & Foldable.toList
+  ]
 
 chooseAccept :: (Ord a) => StateSet -> Nfa a -> Maybe a
 chooseAccept ss nfa =

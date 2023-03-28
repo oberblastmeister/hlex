@@ -88,7 +88,7 @@ dfaEquivalentStates dfa = go p q
           & Dfa.assocs
           & fmap
             ( \(i, Dfa.State {accept}) -> case accept of
-                Just _accept -> Left i
+                Just _ -> Left i
                 Nothing -> Right i
             )
           & Either.partitionEithers

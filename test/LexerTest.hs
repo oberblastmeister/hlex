@@ -1,8 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UnboxedTuples #-}
 {-# OPTIONS_GHC -ddump-simpl
 -ddump-to-file
--ddump-splices
 -dsuppress-module-prefixes
 -dsuppress-coercions
 -dsuppress-idinfo #-}
@@ -48,8 +46,8 @@ data Token
   deriving (Show, Eq)
 
 lexer :: Lex () (Spanned Token)
-lexer = do
-  $( ilex [|tok $ Error "unknown"|] [|tok Eof|] $ do
+lexer =
+  $( ilex [|tok $ Error "unknown"|] [|tok Eof|] do
        "forall" ~= [|tok Forall|]
        "if" ~= [|tok If|]
        "let" ~= [|tok Let|]
@@ -83,14 +81,16 @@ lexer = do
              let start = inputStart i
              res <- Except.runExceptT $ lexString ['"']
              end <- getPos
-             pure $ Spanned (Span start end) $ case res of
+             pure $ Spanned (Span start end) case res of
                Left e -> Error e
                Right x -> String x
            |]
    )
   where
+    skip = const lexer
+    comment = spanned $ Comment . inputText
     lexString cs =
-      $( ilex [|\_ -> Except.throwError "unsupposed string character"|] [|\_ -> Except.throwError "unclosed string"|] $ do
+      $( ilex [|\_ -> Except.throwError "unsupposed string character"|] [|\_ -> Except.throwError "unclosed string"|] do
            "\"" ~= [|\_ -> pure $! T.pack $ reverse $ '"' : cs|]
            "\\n" ~= [|addChar '\n'|]
            "\\t" ~= [|addChar '\t'|]
@@ -108,8 +108,6 @@ lexer = do
        )
       where
         addChar c _i = lexString $ c : cs
-    skip = const lexer
-    comment = spanned $ Comment . inputText
 
 lexAll :: Lex () [Spanned Token]
 lexAll = do
