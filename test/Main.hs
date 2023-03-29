@@ -1,3 +1,4 @@
+import ContextTest qualified
 import LexerTest qualified
 import MinimizeTest qualified
 import RegexTest qualified
@@ -12,5 +13,6 @@ main =
       [ Utf8Test.tests,
         MinimizeTest.tests,
         RegexTest.tests,
-        LexerTest.tests
+        LexerTest.tests,
+        ContextTest.tests
       ]

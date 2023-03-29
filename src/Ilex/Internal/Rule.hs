@@ -11,7 +11,7 @@ import Language.Haskell.TH qualified as TH
 
 data Accept = Accept
   { exp :: TH.ExpQ,
-    context :: [TH.ExpQ]
+    context :: Maybe TH.ExpQ
   }
 
 type RuleBuilder = RuleBuilder' Accept
@@ -26,20 +26,20 @@ newtype RuleBuilder' a b = RuleBuilder
 data Rule a = Rule
   { regex :: Regex,
     accept :: a
-  } deriving (Functor)
+  }
+  deriving (Functor)
 
 rule :: Regex -> TH.ExpQ -> RuleBuilder ()
-rule regex exp = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context = []}}]
+rule regex exp = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context = Nothing}}]
 
-data Context
-  = ContextRegex Regex
-  | ContextPred TH.ExpQ
-
-ruleContext :: Regex -> (TH.ExpQ, [TH.ExpQ]) -> RuleBuilder ()
-ruleContext regex (exp, context) = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context}}]
+ruleContext :: Regex -> (TH.ExpQ, TH.ExpQ) -> RuleBuilder ()
+ruleContext regex (exp, context) = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context = Just context}}]
 
 (~=) :: Regex -> TH.ExpQ -> RuleBuilder ()
 (~=) = rule
+
+(~=?) :: Regex -> (TH.ExpQ, TH.ExpQ) -> RuleBuilder ()
+(~=?) = ruleContext
 
 evalRuleBuilder :: RuleBuilder () -> [Rule Accept]
 evalRuleBuilder = reverse . getDual . Writer.execWriter . runLexerBuilder

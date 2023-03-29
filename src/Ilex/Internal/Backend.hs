@@ -20,6 +20,16 @@ import Language.Haskell.TH qualified as TH
 testing :: forall a. Show a => Proxy a -> TH.CodeQ String
 testing _ = [||show (undefined :: a)||]
 
+newtype MaybeRunId# = MaybeRunId# (# (# #) | (# Int# #) #)
+
+pattern NoRunId# :: MaybeRunId#
+pattern NoRunId# = MaybeRunId# (# (# #) | #)
+
+pattern SomeRunId# :: Int# -> MaybeRunId#
+pattern SomeRunId# runId = MaybeRunId# (# | (# runId #) #)
+
+{-# COMPLETE NoRunId#, SomeRunId# #-}
+
 newtype LastMatch# = LastMatch# (# (# #) | (# Int#, Pos# #) #)
 
 pattern NoLastMatch# :: LastMatch#
@@ -53,9 +63,9 @@ acceptSwitchDec acceptMap name =
 withUtf8InpExp :: TH.ExpQ -> TH.ExpQ
 withUtf8InpExp exp = do
   [|
-    \(end :: Pos#) -> withLexerEnv $ \Env# {arr#} ->
-      withLexerState $ \start -> do
-        setLexerState end
+    \(end :: Pos#) -> withEnv $ \Env# {arr#} ->
+      withPos $ \start -> do
+        setPos end
         $exp
           ( unsafeUtf8Input
               Input#
@@ -94,8 +104,8 @@ acceptSwitchExp acceptMap = do
             matches
         )
   [|
-    \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: Pos#) -> withLexerState $ \($(TH.varP startName)) ->
-      withLexerEnv $ \Env# {arr# = $(TH.varP arrName)} -> do
-        setLexerState $(TH.varE endName)
+    \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: Pos#) -> withPos $ \($(TH.varP startName)) ->
+      withEnv $ \Env# {arr# = $(TH.varP arrName)} -> do
+        setPos $(TH.varE endName)
         $(caseExpr)
     |]

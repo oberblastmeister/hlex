@@ -34,7 +34,6 @@ import Data.Hashable (Hashable)
 import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Data.IntSet (IntSet)
-import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Vector qualified as VB
 import Data.Word (Word8)

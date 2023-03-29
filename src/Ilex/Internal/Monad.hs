@@ -45,11 +45,28 @@ data Utf8Status
 
 type role Input nominal
 
-data Input us = Input
+data Input (us :: Utf8Status) = Input
   { inputArr :: !Primitive.ByteArray,
     inputStart :: !Int,
     inputEnd :: !Int
   }
+
+inputLength :: Input us -> Int
+inputLength Input {inputStart, inputEnd} = inputEnd - inputStart
+{-# INLINE inputLength #-}
+
+instance Show (Input IsUtf8) where
+  show = show . inputText
+
+instance Eq (Input us) where
+  i == i' = inputLength i == inputLength i' && compare i i' == EQ
+
+instance Ord (Input us) where
+  compare i i' = Primitive.compareByteArrays (inputArr i) (inputStart i) (inputArr i') (inputStart i') (min (inputLength i) (inputLength i'))
+
+type Utf8Input = Input IsUtf8
+
+type BytesInput = Input UnknownUtf8
 
 liftInput# :: Input# -> Input us
 liftInput# Input# {inputArr#, inputStart#, inputEnd#} =
@@ -69,8 +86,8 @@ unknownUtf8Input = liftInput#
 {-# INLINE unknownUtf8Input #-}
 
 getPos :: MonadLexer m => m Pos
-getPos = withLexerState \Pos# {off#, charOff#} -> do
-  withLexerEnv \Env# {arrOff#} -> do
+getPos = withPos \Pos# {off#, charOff#} -> do
+  withEnv \Env# {arrOff#} -> do
     let bytePos = I# (off# -# arrOff#)
     let charPos = I# charOff#
     pure Pos {bytePos, charPos}
@@ -90,8 +107,8 @@ inputText
       (inputEnd - inputStart)
 {-# INLINE inputText #-}
 
-combineInput :: Input IsUtf8 -> Input IsUtf8 -> Input IsUtf8
-combineInput
+mergeInput :: Input IsUtf8 -> Input IsUtf8 -> Input IsUtf8
+mergeInput
   i1@Input
     { inputArr = inputArr1,
       inputStart = inputStart1,
@@ -112,7 +129,7 @@ combineInput
         error $
           "combineInput: cannot combine inputs sliced from different strings: "
             <> show (inputText i1, inputText i2)
-{-# INLINE combineInput #-}
+{-# INLINE mergeInput #-}
 
 newtype Env# = Env## (# ByteArray#, Int#, Int# #)
 
@@ -129,62 +146,62 @@ pattern Pos# {off#, charOff#} = Pos## (# off#, charOff# #)
 {-# COMPLETE Pos# #-}
 
 class Monad m => MonadLexer m where
-  withLexerEnv :: (Env# -> m a) -> m a
-  withLexerState :: (Pos# -> m a) -> m a
-  setLexerState :: Pos# -> m ()
+  withEnv :: (Env# -> m a) -> m a
+  withPos :: (Pos# -> m a) -> m a
+  setPos :: Pos# -> m ()
 
 instance MonadLexer m => MonadLexer (Lazy.StateT s m) where
-  withLexerEnv f = Lazy.StateT \s -> withLexerEnv \le -> Lazy.runStateT (f le) s
-  withLexerState f = Lazy.StateT \s -> withLexerState \ls -> Lazy.runStateT (f ls) s
-  setLexerState ls = Lazy.StateT \s -> setLexerState ls $> ((), s)
-  {-# INLINE withLexerEnv #-}
-  {-# INLINE withLexerState #-}
-  {-# INLINE setLexerState #-}
+  withEnv f = Lazy.StateT \s -> withEnv \le -> Lazy.runStateT (f le) s
+  withPos f = Lazy.StateT \s -> withPos \ls -> Lazy.runStateT (f ls) s
+  setPos ls = Lazy.StateT \s -> setPos ls $> ((), s)
+  {-# INLINE withEnv #-}
+  {-# INLINE withPos #-}
+  {-# INLINE setPos #-}
 
 instance MonadLexer m => MonadLexer (Strict.StateT s m) where
-  withLexerEnv f = Strict.StateT \s -> withLexerEnv \le -> Strict.runStateT (f le) s
-  withLexerState f = Strict.StateT \s -> withLexerState \ls -> Strict.runStateT (f ls) s
-  setLexerState ls = Strict.StateT \s -> setLexerState ls $> ((), s)
-  {-# INLINE withLexerEnv #-}
-  {-# INLINE withLexerState #-}
-  {-# INLINE setLexerState #-}
+  withEnv f = Strict.StateT \s -> withEnv \le -> Strict.runStateT (f le) s
+  withPos f = Strict.StateT \s -> withPos \ls -> Strict.runStateT (f ls) s
+  setPos ls = Strict.StateT \s -> setPos ls $> ((), s)
+  {-# INLINE withEnv #-}
+  {-# INLINE withPos #-}
+  {-# INLINE setPos #-}
 
 instance MonadLexer m => MonadLexer (Except.ExceptT e m) where
-  withLexerEnv f = Except.ExceptT $ withLexerEnv \le -> Except.runExceptT $ f le
-  withLexerState f = Except.ExceptT $ withLexerState \ls -> Except.runExceptT $ f ls
-  setLexerState ls = Except.ExceptT $ setLexerState ls $> Right ()
-  {-# INLINE withLexerEnv #-}
-  {-# INLINE withLexerState #-}
-  {-# INLINE setLexerState #-}
+  withEnv f = Except.ExceptT $ withEnv \le -> Except.runExceptT $ f le
+  withPos f = Except.ExceptT $ withPos \ls -> Except.runExceptT $ f ls
+  setPos ls = Except.ExceptT $ setPos ls $> Right ()
+  {-# INLINE withEnv #-}
+  {-# INLINE withPos #-}
+  {-# INLINE setPos #-}
 
 instance MonadLexer m => MonadLexer (Reader.ReaderT r m) where
-  withLexerEnv f = Reader.ReaderT \r -> withLexerEnv \le -> Reader.runReaderT (f le) r
-  withLexerState f = Reader.ReaderT \r -> withLexerState \ls -> Reader.runReaderT (f ls) r
-  setLexerState ls = Reader.ReaderT \_ -> setLexerState ls
-  {-# INLINE withLexerEnv #-}
-  {-# INLINE withLexerState #-}
-  {-# INLINE setLexerState #-}
+  withEnv f = Reader.ReaderT \r -> withEnv \le -> Reader.runReaderT (f le) r
+  withPos f = Reader.ReaderT \r -> withPos \ls -> Reader.runReaderT (f ls) r
+  setPos ls = Reader.ReaderT \_ -> setPos ls
+  {-# INLINE withEnv #-}
+  {-# INLINE withPos #-}
+  {-# INLINE setPos #-}
 
 instance MonadLexer m => MonadLexer (Cont.ContT r m) where
-  withLexerEnv f = Cont.ContT \c -> withLexerEnv \le -> Cont.runContT (f le) c
-  withLexerState f = Cont.ContT \c -> withLexerState \ls -> Cont.runContT (f ls) c
-  setLexerState ls = Cont.ContT \c -> setLexerState ls *> c ()
-  {-# INLINE withLexerEnv #-}
-  {-# INLINE withLexerState #-}
-  {-# INLINE setLexerState #-}
+  withEnv f = Cont.ContT \c -> withEnv \le -> Cont.runContT (f le) c
+  withPos f = Cont.ContT \c -> withPos \ls -> Cont.runContT (f ls) c
+  setPos ls = Cont.ContT \c -> setPos ls *> c ()
+  {-# INLINE withEnv #-}
+  {-# INLINE withPos #-}
+  {-# INLINE setPos #-}
 
 getRemainingInput :: MonadLexer m => m (Input UnknownUtf8)
-getRemainingInput = withLexerEnv \Env# {arr#, endOff#} -> do
-  withLexerState \Pos# {off#} ->
+getRemainingInput = withEnv \Env# {arr#, endOff#} -> do
+  withPos \Pos# {off#} ->
     pure $ unknownUtf8Input Input# {inputArr# = arr#, inputStart# = off#, inputEnd# = endOff#}
 {-# INLINE getRemainingInput #-}
 
 getCharPos :: MonadLexer m => m Int
-getCharPos = withLexerState \Pos# {charOff#} -> pure (I# charOff#)
+getCharPos = withPos \Pos# {charOff#} -> pure (I# charOff#)
 {-# INLINE getCharPos #-}
 
 getBytePos :: MonadLexer m => m Int
-getBytePos = withLexerState \Pos# {off#} -> pure (I# off#)
+getBytePos = withPos \Pos# {off#} -> pure (I# off#)
 {-# INLINE getBytePos #-}
 
 lexText :: Lex s a -> Text -> s -> (s, a)
@@ -233,9 +250,9 @@ instance MonadState s (Lex s) where
   {-# INLINE put #-}
 
 instance MonadLexer (Lex s) where
-  withLexerEnv f = Lex \env ls s -> unLex (f env) env ls s
-  {-# INLINE withLexerEnv #-}
-  withLexerState f = Lex \env ls s -> unLex (f ls) env ls s
-  {-# INLINE withLexerState #-}
-  setLexerState ls = Lex \_env _ s -> (# ls, s, () #)
-  {-# INLINE setLexerState #-}
+  withEnv f = Lex \env ls s -> unLex (f env) env ls s
+  {-# INLINE withEnv #-}
+  withPos f = Lex \env ls s -> unLex (f ls) env ls s
+  {-# INLINE withPos #-}
+  setPos ls = Lex \_env _ s -> (# ls, s, () #)
+  {-# INLINE setPos #-}

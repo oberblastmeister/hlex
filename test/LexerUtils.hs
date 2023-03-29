@@ -15,6 +15,15 @@ data Spanned a = Spanned
   }
   deriving (Show, Eq)
 
+lexUntil :: (t -> Bool) -> Lex s t -> Lex s [t]
+lexUntil p lex = do
+  t <- lex
+  if p t
+    then pure [t]
+    else do
+      ts <- lexUntil p lex
+      pure $ t : ts
+
 -- spanned :: (LexerInput -> a) -> LexerInput -> Lex s (Spanned a)
 -- spanned f i = do
 --   let start = inputStart i

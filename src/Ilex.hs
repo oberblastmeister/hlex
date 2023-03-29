@@ -4,13 +4,16 @@ module Ilex
 where
 
 import Ilex.Internal.Driver as X (ilex)
-import Ilex.Internal.Rule as X (rule, (~=))
 import Ilex.Internal.Monad as X
-  ( Lex,
+  ( BytesInput,
     Input,
+    Lex,
     Pos (..),
+    Utf8Input,
     getPos,
-    inputText,
-    combineInput,
     lexText,
+    inputText,
+    inputLength,
+    mergeInput,
   )
+import Ilex.Internal.Rule as X (rule, (~=), (~=?))

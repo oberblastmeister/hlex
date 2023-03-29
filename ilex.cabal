@@ -121,6 +121,7 @@ test-suite ilex-test
     RegexTest
     Utf8Test
     SimpleTest
+    ContextTest
   build-depends:
     ilex,
     tasty,

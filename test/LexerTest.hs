@@ -46,7 +46,7 @@ data Token
   deriving (Show, Eq)
 
 lexer :: Pos -> Lex () (Spanned Token)
-lexer start = do
+lexer start =
   $( ilex [|tok $ Error "unknown"|] [|tok Eof|] do
        "forall" ~= [|tok Forall|]
        "if" ~= [|tok If|]
