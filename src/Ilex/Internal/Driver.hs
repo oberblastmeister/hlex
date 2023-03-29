@@ -7,6 +7,7 @@ import Ilex.Internal.Backend qualified as Backend
 import Ilex.Internal.Backend.Table qualified as Backend.Table
 import Ilex.Internal.Minimize qualified as Minimize
 import Ilex.Internal.NfaToDfa qualified as NfaToDfa
+import Ilex.Internal.Regex (Regex)
 import Ilex.Internal.RegexToNfa qualified as RegexToNfa
 import Ilex.Internal.Rule (Rule)
 import Ilex.Internal.Rule qualified as Rule
@@ -23,13 +24,21 @@ ilex onError onEof builder =
         rules = Rule.evalRuleBuilder builder
       }
 
+matches :: Regex -> TH.ExpQ
+matches r = Backend.Table.matchesDfa minDfa
+  where
+    nfa = RegexToNfa.regexToNfa () r
+    dfa = NfaToDfa.nfaToDfa nfa
+    minDfa = Minimize.minimize dfa
+
 ilexFromConfig :: Config -> TH.ExpQ
 ilexFromConfig Config {backendKind, onError, onEof, rules} =
   case backendKind of
     Table -> Backend.Table.codegen backendConfig minDfa'
     _ -> undefined
-    -- Fun -> Backend.Fun.codegen backendConfig minDfa
   where
+    -- Fun -> Backend.Fun.codegen backendConfig minDfa
+
     backendConfig = Backend.BackendConfig {onError, onEof}
     rules' = (\(i, rule) -> Indexed i <$> rule) <$> zip [0 :: Int ..] rules
     nfa = RegexToNfa.lexerToNfa rules'

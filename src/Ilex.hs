@@ -3,7 +3,7 @@ module Ilex
   )
 where
 
-import Ilex.Internal.Driver as X (ilex)
+import Ilex.Internal.Driver as X (ilex, matches)
 import Ilex.Internal.Monad as X
   ( BytesInput,
     Input,
@@ -11,9 +11,11 @@ import Ilex.Internal.Monad as X
     Pos (..),
     Utf8Input,
     getPos,
-    lexText,
-    inputText,
     inputLength,
+    inputText,
+    isInputEnd,
+    isInputStart,
+    lexText,
     mergeInput,
   )
 import Ilex.Internal.Rule as X (rule, (~=), (~=?))

@@ -51,6 +51,14 @@ data Input (us :: Utf8Status) = Input
     inputEnd :: !Int
   }
 
+isInputStart :: Input us -> Bool
+isInputStart Input {inputStart} = inputStart == 0
+{-# INLINE isInputStart #-}
+
+isInputEnd :: Input us -> Bool
+isInputEnd Input {inputArr, inputEnd} = inputEnd == Primitive.sizeofByteArray inputArr
+{-# INLINE isInputEnd #-}
+
 inputLength :: Input us -> Int
 inputLength Input {inputStart, inputEnd} = inputEnd - inputStart
 {-# INLINE inputLength #-}

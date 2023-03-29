@@ -9,13 +9,15 @@ import Data.ByteString qualified as B
 import Data.ByteString.Internal qualified as B.Internal
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NE
+import Data.Maybe qualified as Maybe
 import Data.Primitive (ByteArray#)
+import Data.Primitive qualified as Primitive
 import Data.Vector qualified as V
 import Data.Vector qualified as VB
 import Data.Vector.Storable qualified as VS
 import Foreign qualified
 import Foreign.Storable qualified as Storable
-import GHC.Exts (Addr#, Int#, (*#), (+#), (>=#))
+import GHC.Exts (Addr#, Int (..), Int#, (*#), (+#), (>=#))
 import GHC.Exts qualified as Exts
 import GHC.Int (Int32 (I32#))
 import GHC.Word (Word32 (W32#), Word8 (W8#))
@@ -43,6 +45,13 @@ generateInfoTable dfa =
     [ (fromIntegral acceptId `Bits.shiftL` 1)
         Bits..|. (if Dfa.isCharEnd state then 1 else 0)
       | (acceptId, state) <- zipAcceptIds $ V.toList $ Dfa.states dfa
+    ]
+
+generateIsAcceptTable :: Dfa a -> VS.Vector Word8
+generateIsAcceptTable dfa =
+  VS.fromList
+    [ if Maybe.isJust $ Dfa.accept state then 1 else 0
+      | state <- V.toList $ Dfa.states dfa
     ]
 
 zipAcceptIds :: [Dfa.State a] -> [(Int, Dfa.State a)]
@@ -132,17 +141,32 @@ genCheckPredicatesExp dfa = do
           accepts
     withAcceptIds = zip [0 :: Int ..] withRunIds
 
-type Matches# = Addr# -> Int# -> ByteArray# -> Int# -> Int# -> Int#
+type Matches# = Addr# -> Addr# -> Int# -> ByteArray# -> Int# -> Int# -> Int#
+
+matchesDfa :: Dfa a -> TH.ExpQ
+matchesDfa dfa =
+  [|
+    let stateTable = $(liftStorableVectorToAddr# $ generateTransitionTable dfa)
+        isAcceptTable = $(liftStorableVectorToAddr# $ generateIsAcceptTable dfa)
+     in \Input {inputArr = Primitive.ByteArray arr#, inputStart = I# off#, inputEnd = I# endOff#} ->
+          Exts.isTrue# (matches# stateTable isAcceptTable $(TH.litE $ TH.intPrimL $ toInteger $ Dfa.start dfa) arr# off# endOff#)
+    |]
 
 matches# :: Matches#
-matches# table stateId arr off endOff = case off >=# endOff of
-  1# -> 0#
-  _ -> do
-    let !b = W8# (Exts.indexWord8Array# arr off)
-        !stateId' = nextState# table stateId b
-    case stateId' of
-      -1# -> 0#
-      _ -> matches# table stateId' arr (off +# 1#) endOff
+matches# stateTable isAcceptTable = go
+  where
+    go stateId arr off endOff =
+      case W8# (Exts.indexWord8OffAddr# isAcceptTable stateId) of
+        1 -> 1#
+        _ ->
+          case off >=# endOff of
+            1# -> 0#
+            _ -> do
+              let !b = W8# (Exts.indexWord8Array# arr off)
+                  !stateId' = nextState# stateTable stateId b
+              case stateId' of
+                -1# -> 0#
+                _ -> go stateId' arr (off +# 1#) endOff
 
 -- FIXME: error stuff can go through char boundaries
 codegen :: BackendConfig -> Dfa (NonEmpty Rule.Accept) -> TH.ExpQ
