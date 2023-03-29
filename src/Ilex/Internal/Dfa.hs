@@ -20,6 +20,7 @@ module Ilex.Internal.Dfa
     simulate,
     valid,
     accepts,
+    mapStates,
   )
 where
 
@@ -55,6 +56,9 @@ data Dfa' f s a = Dfa
   }
 
 deriving instance (Show a, Show s) => Show (Dfa' (AssocList Int) s a)
+
+mapStates :: ((f (State' s a)) -> (f (State' s a))) -> Dfa' f s a -> Dfa' f s a
+mapStates f dfa@Dfa {states} = dfa {states = f states}
 
 instance Show a => Show (Dfa a) where
   show = show . toAssocList

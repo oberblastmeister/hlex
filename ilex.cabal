@@ -53,6 +53,7 @@ common common-options
     -- until OverloadedRecordUpdate stabilizes
     -- -Wno-ambiguous-fields
     -Wno-partial-type-signatures
+    -Wno-unticked-promoted-constructors
     -- -Werror=incomplete-patterns
     -- -Werror=incomplete-uni-patterns
     -Werror=missing-methods
@@ -98,6 +99,7 @@ library
         Ilex.Internal.AssocList
         Ilex.Internal.Runtime
         Ilex.Internal.ByteString
+        Ilex.Internal.Prim
     
 
 common rtsopts

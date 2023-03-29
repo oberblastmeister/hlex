@@ -7,11 +7,10 @@ import Ilex.Internal.Driver as X (ilex)
 import Ilex.Internal.Rule as X (rule, (~=))
 import Ilex.Internal.Monad as X
   ( Lex,
-    LexerInput,
+    Input,
     Pos (..),
     getPos,
-    inputEnd,
-    inputStart,
     inputText,
+    combineInput,
     lexText,
   )

@@ -3,9 +3,7 @@
 module Ilex.Internal.Driver where
 
 import Data.Function (on)
-import Data.Vector qualified as VB
 import Ilex.Internal.Backend qualified as Backend
-import Ilex.Internal.Backend.Fun qualified as Backend.Fun
 import Ilex.Internal.Backend.Table qualified as Backend.Table
 import Ilex.Internal.Minimize qualified as Minimize
 import Ilex.Internal.NfaToDfa qualified as NfaToDfa

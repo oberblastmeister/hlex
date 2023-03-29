@@ -15,21 +15,14 @@ data Spanned a = Spanned
   }
   deriving (Show, Eq)
 
-getSpan :: LexerInput -> Span
-getSpan i = do
-  Span start end
-  where
-    start = inputStart i
-    end = inputEnd i
+-- spanned :: (LexerInput -> a) -> LexerInput -> Lex s (Spanned a)
+-- spanned f i = do
+--   let start = inputStart i
+--   let end = inputEnd i
+--   pure $ Spanned (Span start end) $ f i
 
-spanned :: (LexerInput -> a) -> LexerInput -> Lex s (Spanned a)
-spanned f i = do
-  let start = inputStart i
-  let end = inputEnd i
-  pure $ Spanned (Span start end) $ f i
-
-tok :: a -> LexerInput -> Lex s (Spanned a)
-tok = spanned . const
+-- tok :: a -> LexerInput -> Lex s (Spanned a)
+-- tok = spanned . const
 
 rLower :: R.Regex
 rLower = R.range ('a', 'z')

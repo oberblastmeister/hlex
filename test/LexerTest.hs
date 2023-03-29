@@ -45,8 +45,8 @@ data Token
   | String !Text
   deriving (Show, Eq)
 
-lexer :: Lex () (Spanned Token)
-lexer =
+lexer :: Pos -> Lex () (Spanned Token)
+lexer start = do
   $( ilex [|tok $ Error "unknown"|] [|tok Eof|] do
        "forall" ~= [|tok Forall|]
        "if" ~= [|tok If|]
@@ -68,17 +68,16 @@ lexer =
        "(" ~= [|tok Lparen|]
        ")" ~= [|tok Rparen|]
        "." ~= [|tok Dot|]
-       R.cat [rLower, R.many rIdent] ~= [|spanned $ Ident . Ilex.inputText|]
-       R.cat [rUpper, R.many rIdent] ~= [|spanned $ ConIdent . Ilex.inputText|]
-       R.some R.digit ~= [|spanned $ Num . Ilex.inputText|]
+       R.cat [rLower, R.many rIdent] ~= [|spanned $ Ident . inputText|]
+       R.cat [rUpper, R.many rIdent] ~= [|spanned $ ConIdent . inputText|]
+       R.some R.digit ~= [|spanned $ Num . inputText|]
        R.cat ["--", R.many R.dot] ~= [|comment|]
        R.cat ["{-", R.many $ R.alt [R.dot, "\n"], "-}"] ~= [|comment|]
        R.some R.isSpace ~= [|skip|]
        R.some "\n" ~= [|skip|]
        "\""
          ~= [|
-           \i -> do
-             let start = inputStart i
+           \_ -> do
              res <- Except.runExceptT $ lexString ['"']
              end <- getPos
              pure $ Spanned (Span start end) case res of
@@ -87,7 +86,11 @@ lexer =
            |]
    )
   where
-    skip = const lexer
+    tok = spanned . const
+    spanned f i = do
+      end <- getPos
+      pure $! Spanned (Span start end) $! f i
+    skip = const $ lexer =<< getPos
     comment = spanned $ Comment . inputText
     lexString cs =
       $( ilex [|\_ -> Except.throwError "unsupposed string character"|] [|\_ -> Except.throwError "unclosed string"|] do
@@ -111,7 +114,7 @@ lexer =
 
 lexAll :: Lex () [Spanned Token]
 lexAll = do
-  t <- lexer
+  t <- lexer =<< getPos
   case value t of
     Eof -> pure [t]
     _ -> do

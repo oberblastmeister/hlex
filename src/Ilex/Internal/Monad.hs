@@ -1,4 +1,5 @@
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE UnliftedNewtypes #-}
 {-# LANGUAGE NoDuplicateRecordFields #-}
@@ -23,13 +24,14 @@ import GHC.Exts (Int (..), Int#, (+#), (-#))
 import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
 import Ilex.Internal.ByteString (unpackByteString)
+import Ilex.Internal.Prim (sameByteArray)
 
-newtype LexerInput# = LexerInput## (# ByteArray#, Int#, LexerState#, LexerState# #)
+newtype Input# = Input## (# ByteArray#, Int#, Int# #)
 
-pattern LexerInput# :: ByteArray# -> Int# -> LexerState# -> LexerState# -> LexerInput#
-pattern LexerInput# {inputArr#, inputArrOff#, inputStart#, inputEnd#} = LexerInput## (# inputArr#, inputArrOff#, inputStart#, inputEnd# #)
+pattern Input# :: ByteArray# -> Int# -> Int# -> Input#
+pattern Input# {inputArr#, inputStart#, inputEnd#} = Input## (# inputArr#, inputStart#, inputEnd# #)
 
-{-# COMPLETE LexerInput# #-}
+{-# COMPLETE Input# #-}
 
 data Pos = Pos
   { bytePos :: !Int,
@@ -37,87 +39,99 @@ data Pos = Pos
   }
   deriving (Show, Eq, Ord, Generic)
 
-data LexerInput = LI LexerInput#
+data Utf8Status
+  = IsUtf8
+  | UnknownUtf8
+
+type role Input nominal
+
+data Input us = Input
+  { inputArr :: !Primitive.ByteArray,
+    inputStart :: !Int,
+    inputEnd :: !Int
+  }
+
+liftInput# :: Input# -> Input us
+liftInput# Input# {inputArr#, inputStart#, inputEnd#} =
+  Input
+    { inputArr = Primitive.ByteArray inputArr#,
+      inputStart = I# inputStart#,
+      inputEnd = I# inputEnd#
+    }
+{-# INLINE liftInput# #-}
+
+unsafeUtf8Input :: Input# -> Input IsUtf8
+unsafeUtf8Input = liftInput#
+{-# INLINE unsafeUtf8Input #-}
+
+unknownUtf8Input :: Input# -> Input UnknownUtf8
+unknownUtf8Input = liftInput#
+{-# INLINE unknownUtf8Input #-}
 
 getPos :: MonadLexer m => m Pos
-getPos = withLexerState \LexerState {off#, charOff#} -> do
-  withLexerEnv \LexerEnv {arrOff#} -> do
+getPos = withLexerState \Pos# {off#, charOff#} -> do
+  withLexerEnv \Env# {arrOff#} -> do
     let bytePos = I# (off# -# arrOff#)
     let charPos = I# charOff#
     pure Pos {bytePos, charPos}
 {-# INLINE getPos #-}
 
-inputText :: LexerInput -> Text
+inputText :: Input IsUtf8 -> Text
 inputText
-  ( LI
-      LexerInput#
-        { inputArr#,
-          inputStart# = LexerState {off#},
-          inputEnd# = LexerState {off# = endOff#}
-        }
+  ( Input
+      { inputArr = Primitive.ByteArray inputArr#,
+        inputStart,
+        inputEnd
+      }
     ) =
     Data.Text.Internal.Text
       (Data.Text.Array.ByteArray inputArr#)
-      (I# off#)
-      (I# (endOff# -# off#))
+      inputStart
+      (inputEnd - inputStart)
 {-# INLINE inputText #-}
 
-inputStart :: LexerInput -> Pos
-inputStart
-  ( LI
-      LexerInput#
-        { inputArrOff#,
-          inputStart# = LexerState {off#, charOff#}
-        }
-    ) =
-    Pos {bytePos = I# (off# -# inputArrOff#), charPos = I# charOff#}
-{-# INLINE inputStart #-}
+combineInput :: Input IsUtf8 -> Input IsUtf8 -> Input IsUtf8
+combineInput
+  i1@Input
+    { inputArr = inputArr1,
+      inputStart = inputStart1,
+      inputEnd = inputEnd1
+    }
+  i2@Input
+    { inputArr = inputArr2,
+      inputStart = inputStart2,
+      inputEnd = inputEnd2
+    }
+    | sameByteArray inputArr1 inputArr2 =
+        Input
+          { inputArr = inputArr1,
+            inputStart = min inputStart1 inputStart2,
+            inputEnd = max inputEnd1 inputEnd2
+          }
+    | otherwise =
+        error $
+          "combineInput: cannot combine inputs sliced from different strings: "
+            <> show (inputText i1, inputText i2)
+{-# INLINE combineInput #-}
 
-inputEnd :: LexerInput -> Pos
-inputEnd
-  ( LI
-      LexerInput#
-        { inputArrOff#,
-          inputEnd# = LexerState {off#, charOff#}
-        }
-    ) =
-    Pos {bytePos = I# (off# -# inputArrOff#), charPos = I# charOff#}
-{-# INLINE inputEnd #-}
+newtype Env# = Env## (# ByteArray#, Int#, Int# #)
 
-newtype LexerEnv# = LexerEnv# (# ByteArray#, Int#, Int# #)
+pattern Env# :: ByteArray# -> Int# -> Int# -> Env#
+pattern Env# {arr#, endOff#, arrOff#} = Env## (# arr#, endOff#, arrOff# #)
 
-pattern LexerEnv :: ByteArray# -> Int# -> Int# -> LexerEnv#
-pattern LexerEnv {arr#, endOff#, arrOff#} = LexerEnv# (# arr#, endOff#, arrOff# #)
+{-# COMPLETE Env# #-}
 
-{-# COMPLETE LexerEnv #-}
+newtype Pos# = Pos## (# Int#, Int# #)
 
-newtype LexerState# = LexerState# (# Int#, Int# #)
+pattern Pos# :: Int# -> Int# -> Pos#
+pattern Pos# {off#, charOff#} = Pos## (# off#, charOff# #)
 
-pattern LexerState :: Int# -> Int# -> LexerState#
-pattern LexerState {off#, charOff#} = LexerState# (# off#, charOff# #)
-
-{-# COMPLETE LexerState #-}
-
-newtype LineCol# = LineCol## (# Int#, Int# #)
-
-pattern LineCol# :: Int# -> Int# -> LineCol#
-pattern LineCol# {line#, col#} = LineCol## (# line#, col# #)
-
-{-# COMPLETE LineCol# #-}
-
-data LineCol = LineCol
-  { line :: !Int,
-    col :: !Int
-  }
-
-liftLineCol :: LineCol# -> LineCol
-liftLineCol (LineCol# {line#, col#}) = LineCol {line = I# line#, col = I# col#}
-{-# INLINE liftLineCol #-}
+{-# COMPLETE Pos# #-}
 
 class Monad m => MonadLexer m where
-  withLexerEnv :: (LexerEnv# -> m a) -> m a
-  withLexerState :: (LexerState# -> m a) -> m a
-  setLexerState :: LexerState# -> m ()
+  withLexerEnv :: (Env# -> m a) -> m a
+  withLexerState :: (Pos# -> m a) -> m a
+  setLexerState :: Pos# -> m ()
 
 instance MonadLexer m => MonadLexer (Lazy.StateT s m) where
   withLexerEnv f = Lazy.StateT \s -> withLexerEnv \le -> Lazy.runStateT (f le) s
@@ -159,29 +173,35 @@ instance MonadLexer m => MonadLexer (Cont.ContT r m) where
   {-# INLINE withLexerState #-}
   {-# INLINE setLexerState #-}
 
+getRemainingInput :: MonadLexer m => m (Input UnknownUtf8)
+getRemainingInput = withLexerEnv \Env# {arr#, endOff#} -> do
+  withLexerState \Pos# {off#} ->
+    pure $ unknownUtf8Input Input# {inputArr# = arr#, inputStart# = off#, inputEnd# = endOff#}
+{-# INLINE getRemainingInput #-}
+
 getCharPos :: MonadLexer m => m Int
-getCharPos = withLexerState \LexerState {charOff#} -> pure (I# charOff#)
+getCharPos = withLexerState \Pos# {charOff#} -> pure (I# charOff#)
 {-# INLINE getCharPos #-}
 
 getBytePos :: MonadLexer m => m Int
-getBytePos = withLexerState \LexerState {off#} -> pure (I# off#)
+getBytePos = withLexerState \Pos# {off#} -> pure (I# off#)
 {-# INLINE getBytePos #-}
 
 lexText :: Lex s a -> Text -> s -> (s, a)
 lexText (Lex f) (Data.Text.Internal.Text (Data.Text.Array.ByteArray bs) (I# off#) (I# len#)) s =
-  case f (LexerEnv {arr# = bs, endOff# = off# +# len#, arrOff# = off#}) (LexerState {off# = off#, charOff# = 0#}) s of
+  case f (Env# {arr# = bs, endOff# = off# +# len#, arrOff# = off#}) (Pos# {off# = off#, charOff# = 0#}) s of
     (# _, s, a #) -> (s, a)
 
 lexByteString :: Lex s a -> ByteString -> s -> (s, a)
 lexByteString (Lex f) bytestring s =
-  case f (LexerEnv {arr# = bs, endOff# = endOff#, arrOff# = off#}) (LexerState {off# = off#, charOff# = 0#}) s of
+  case f (Env# {arr# = bs, endOff# = endOff#, arrOff# = off#}) (Pos# {off# = off#, charOff# = 0#}) s of
     (# _, s, a #) -> (s, a)
   where
     !(Primitive.ByteArray bs, I# off#, I# endOff#) = unpackByteString bytestring
 
-newtype Lex s a = Lex' {unLex :: LexerEnv# -> LexerState# -> s -> (# LexerState#, s, a #)}
+newtype Lex s a = Lex' {unLex :: Env# -> Pos# -> s -> (# Pos#, s, a #)}
 
-pattern Lex :: (LexerEnv# -> LexerState# -> s -> (# LexerState#, s, a #)) -> Lex s a
+pattern Lex :: (Env# -> Pos# -> s -> (# Pos#, s, a #)) -> Lex s a
 pattern Lex f <- Lex' f
   where
     Lex f = Lex' $ Exts.oneShot \le -> Exts.oneShot \ls -> Exts.oneShot \s -> f le ls s

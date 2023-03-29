@@ -10,29 +10,28 @@ import Data.IntMap qualified as IntMap
 import Data.List qualified as List
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe qualified as Maybe
+import Data.Proxy (Proxy)
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (Int#)
 import Ilex.Internal.Monad
 import Language.Haskell.TH qualified as TH
-import Data.Proxy (Proxy)
 
 testing :: forall a. Show a => Proxy a -> TH.CodeQ String
 testing _ = [||show (undefined :: a)||]
 
-newtype LastMatch# = LastMatch# (# (# #) | (# Int#, LexerState# #) #)
+newtype LastMatch# = LastMatch# (# (# #) | (# Int#, Pos# #) #)
 
 pattern NoLastMatch# :: LastMatch#
 pattern NoLastMatch# = LastMatch# (# (# #) | #)
 
-pattern SomeLastMatch# :: Int# -> LexerState# -> LastMatch#
+pattern SomeLastMatch# :: Int# -> Pos# -> LastMatch#
 pattern SomeLastMatch# {lastMatchAccept#, lastMatchEnd#} = LastMatch# (# | (# lastMatchAccept#, lastMatchEnd# #) #)
 
 {-# COMPLETE NoLastMatch#, SomeLastMatch# #-}
 
 data BackendConfig = BackendConfig
-  { 
-    onError :: TH.ExpQ,
+  { onError :: TH.ExpQ,
     onEof :: TH.ExpQ
   }
 
@@ -51,19 +50,18 @@ acceptSwitchDec acceptMap name =
     (TH.normalB $ acceptSwitchExp acceptMap)
     []
 
-withInpExp :: TH.ExpQ -> TH.ExpQ
-withInpExp exp = do
+withUtf8InpExp :: TH.ExpQ -> TH.ExpQ
+withUtf8InpExp exp = do
   [|
-    \(end :: LexerState#) -> withLexerEnv $ \LexerEnv {arr#, arrOff#} ->
+    \(end :: Pos#) -> withLexerEnv $ \Env# {arr#} ->
       withLexerState $ \start -> do
         setLexerState end
         $exp
-          ( LI
-              LexerInput#
+          ( unsafeUtf8Input
+              Input#
                 { inputArr# = arr#,
-                  inputArrOff# = arrOff#,
-                  inputStart# = start,
-                  inputEnd# = end
+                  inputStart# = off# start,
+                  inputEnd# = off# end
                 }
           )
     |]
@@ -71,8 +69,7 @@ withInpExp exp = do
 acceptSwitchExp :: VB.Vector TH.ExpQ -> TH.ExpQ
 acceptSwitchExp acceptMap = do
   acceptIdName <- TH.newName "acceptId"
-  bsName <- TH.newName "bs"
-  arrOffName <- TH.newName "arrOff"
+  arrName <- TH.newName "arr"
   startName <- TH.newName "start"
   endName <- TH.newName "end"
   let matches = flip map (zip [0 :: Int ..] $ VB.toList acceptMap) \(i, exp) -> do
@@ -81,12 +78,11 @@ acceptSwitchExp acceptMap = do
           ( TH.normalB
               [|
                 $exp
-                  ( LI
-                      LexerInput#
-                        { inputArr# = $(TH.varE bsName),
-                          inputArrOff# = $(TH.varE arrOffName),
-                          inputStart# = $(TH.varE startName),
-                          inputEnd# = $(TH.varE endName)
+                  ( unsafeUtf8Input
+                      Input#
+                        { inputArr# = $(TH.varE arrName),
+                          inputStart# = off# $(TH.varE startName),
+                          inputEnd# = off# $(TH.varE endName)
                         }
                   )
                 |]
@@ -95,11 +91,11 @@ acceptSwitchExp acceptMap = do
   let caseExpr =
         ( TH.caseE
             (TH.varE acceptIdName)
-            (matches ++ [TH.match TH.wildP (TH.normalB [|error "invalid accept id"|]) []])
+            matches
         )
   [|
-    \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: LexerState#) -> withLexerState $ \($(TH.varP startName)) ->
-      withLexerEnv $ \LexerEnv {arr# = $(TH.varP bsName), arrOff# = $(TH.varP arrOffName)} -> do
+    \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: Pos#) -> withLexerState $ \($(TH.varP startName)) ->
+      withLexerEnv $ \Env# {arr# = $(TH.varP arrName)} -> do
         setLexerState $(TH.varE endName)
         $(caseExpr)
     |]
