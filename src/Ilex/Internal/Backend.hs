@@ -10,15 +10,11 @@ import Data.IntMap qualified as IntMap
 import Data.List qualified as List
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe qualified as Maybe
-import Data.Proxy (Proxy)
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (Int#)
 import Ilex.Internal.Monad
 import Language.Haskell.TH qualified as TH
-
-testing :: forall a. Show a => Proxy a -> TH.CodeQ String
-testing _ = [||show (undefined :: a)||]
 
 newtype MaybeRunId# = MaybeRunId# (# (# #) | (# Int# #) #)
 
@@ -41,7 +37,7 @@ pattern SomeLastMatch# {lastMatchAccept#, lastMatchEnd#} = LastMatch# (# | (# la
 {-# COMPLETE NoLastMatch#, SomeLastMatch# #-}
 
 data BackendConfig = BackendConfig
-  { onError :: TH.ExpQ,
+  { onInvalidUtf8 :: TH.ExpQ,
     onEof :: TH.ExpQ
   }
 
@@ -60,17 +56,16 @@ acceptSwitchDec acceptMap name =
     (TH.normalB $ acceptSwitchExp acceptMap)
     []
 
-withUtf8InpExp :: TH.ExpQ -> TH.ExpQ
-withUtf8InpExp exp = do
+withInpExp :: TH.ExpQ -> TH.ExpQ
+withInpExp exp = do
   [|
-    \(end :: Pos#) -> withEnv $ \Env# {arr#} ->
+    \(end :: Pos#) -> withInput $ \(input :: Input# u) ->
       withPos $ \start -> do
         setPos end
         $exp
-          ( unsafeUtf8Input
-              Input#
-                { inputArr# = arr#,
-                  inputStart# = off# start,
+          ( liftInput# @u
+              input
+                { inputStart# = off# start,
                   inputEnd# = off# end
                 }
           )
@@ -79,19 +74,19 @@ withUtf8InpExp exp = do
 acceptSwitchExp :: VB.Vector TH.ExpQ -> TH.ExpQ
 acceptSwitchExp acceptMap = do
   acceptIdName <- TH.newName "acceptId"
-  arrName <- TH.newName "arr"
   startName <- TH.newName "start"
   endName <- TH.newName "end"
+  inputName <- TH.newName "input"
+  uName <- TH.newName "u"
   let matches = flip map (zip [0 :: Int ..] $ VB.toList acceptMap) \(i, exp) -> do
         TH.match
           (TH.litP $ TH.intPrimL $ toInteger i)
           ( TH.normalB
               [|
                 $exp
-                  ( unsafeUtf8Input
-                      Input#
-                        { inputArr# = $(TH.varE arrName),
-                          inputStart# = off# $(TH.varE startName),
+                  ( liftInput# @($(TH.varT uName))
+                      $(TH.varE inputName)
+                        { inputStart# = off# $(TH.varE startName),
                           inputEnd# = off# $(TH.varE endName)
                         }
                   )
@@ -105,7 +100,7 @@ acceptSwitchExp acceptMap = do
         )
   [|
     \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: Pos#) -> withPos $ \($(TH.varP startName)) ->
-      withEnv $ \Env# {arr# = $(TH.varP arrName)} -> do
+      withInput $ \($(TH.varP inputName) :: Input# $(TH.varT uName)) -> do
         setPos $(TH.varE endName)
         $(caseExpr)
     |]

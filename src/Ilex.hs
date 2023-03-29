@@ -9,7 +9,7 @@ import Ilex.Internal.Monad as X
     Input,
     Lex,
     Pos (..),
-    Utf8Input,
+    Utf8Status (..),
     getPos,
     inputLength,
     inputText,

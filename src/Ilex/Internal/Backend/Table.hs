@@ -104,7 +104,7 @@ genCheckPredicatesExpCase inputName inputRestName acceptId toRun =
 emptyCheckPredicatesExp :: TH.ExpQ
 emptyCheckPredicatesExp =
   [|
-    \(acceptId :: Int#) (_ :: Pos#) (_ :: Pos#) (_ :: ByteArray#) (_ :: Int#) -> SomeRunId# acceptId
+    \(acceptId :: Int#) (_ :: Pos#) (_ :: Pos#) (_ :: Input# u) -> SomeRunId# acceptId
     |]
 
 genCheckPredicatesExp :: Dfa (NonEmpty Rule.Accept) -> TH.ExpQ
@@ -115,21 +115,15 @@ genCheckPredicatesExp dfa = do
   let matches = [genCheckPredicatesExpCase inputName inputRestName acceptId toRun | (acceptId, toRun) <- withAcceptIds]
       caseExp = TH.caseE (TH.varE acceptIdName) matches
   [|
-    \($(TH.varP acceptIdName) :: Int#) (start :: Pos#) (end :: Pos#) (arr# :: ByteArray#) (arrEnd# :: Int#) ->
+    \($(TH.varP acceptIdName) :: Int#) (start :: Pos#) (end :: Pos#) (input :: Input# u) ->
       let $(TH.varP inputName) =
-            unsafeUtf8Input
-              Input#
-                { inputArr# = arr#,
-                  inputStart# = off# start,
+            liftInput# @u
+              input
+                { inputStart# = off# start,
                   inputEnd# = off# end
                 }
           $(TH.varP inputRestName) =
-            unknownUtf8Input
-              Input#
-                { inputArr# = arr#,
-                  inputStart# = off# end,
-                  inputEnd# = arrEnd#
-                }
+            liftInput# @u input {inputStart# = off# end}
        in $caseExp
     |]
   where
@@ -148,8 +142,8 @@ matchesDfa dfa =
   [|
     let stateTable = $(liftStorableVectorToAddr# $ generateTransitionTable dfa)
         isAcceptTable = $(liftStorableVectorToAddr# $ generateIsAcceptTable dfa)
-     in \Input {inputArr = Primitive.ByteArray arr#, inputStart = I# off#, inputEnd = I# endOff#} ->
-          Exts.isTrue# (matches# stateTable isAcceptTable $(TH.litE $ TH.intPrimL $ toInteger $ Dfa.start dfa) arr# off# endOff#)
+     in \Input {inputArr = Primitive.ByteArray inputArr#, inputStart = I# off#, inputEnd = I# inputEnd#} ->
+          Exts.isTrue# (matches# stateTable isAcceptTable $(TH.litE $ TH.intPrimL $ toInteger $ Dfa.start dfa) inputArr# off# inputEnd#)
     |]
 
 matches# :: Matches#
@@ -167,6 +161,7 @@ matches# stateTable isAcceptTable = go
               case stateId' of
                 -1# -> 0#
                 _ -> go stateId' arr (off +# 1#) endOff
+{-# INLINE matches# #-}
 
 -- FIXME: error stuff can go through char boundaries
 codegen :: BackendConfig -> Dfa (NonEmpty Rule.Accept) -> TH.ExpQ
@@ -186,40 +181,40 @@ codegen config dfa = do
 
       infoTable = $(liftStorableVectorToAddr# $ generateInfoTable dfa)
 
-      runOnError = $(withUtf8InpExp (onError config))
+      runOnInvalidUtf8 = $(withInpExp (onInvalidUtf8 config))
 
-      runOnEof = $(withUtf8InpExp (onEof config))
+      runOnEof = $(withInpExp (onEof config))
 
       checkPredicates = $checkPredicatesExp
 
       loop (stateId :: Int#) (pos :: Pos#) (lastMatch :: LastMatch#) =
         withPos $ \start ->
-          withEnv $ \Env# {arr#, endOff#} ->
+          withInput $ \(input@Input# {inputArr#, inputEnd#} :: Input# u) ->
             let !info = W32# (Exts.indexWord32OffAddr# infoTable stateId)
                 !acceptId = unI# (fromIntegral @Int32 @Int ((fromIntegral @Word32 @Int32 info) `Bits.unsafeShiftR` 1))
                 !newPos = pos {charOff# = charOff# pos +# unI# (fromIntegral @Word32 @Int (info Bits..&. 1))}
                 !newMatch = case acceptId of
                   -1# -> lastMatch
                   _ ->
-                    case checkPredicates acceptId start newPos arr# endOff# of
+                    case checkPredicates acceptId start newPos input of
                       NoRunId# -> lastMatch
                       SomeRunId# runId ->
                         SomeLastMatch#
                           { lastMatchAccept# = runId,
                             lastMatchEnd# = newPos
                           }
-             in case off# pos >=# endOff# of
+             in case off# pos >=# inputEnd# of
                   1# -> case newMatch of
                     NoLastMatch# -> runOnEof newPos
                     SomeLastMatch# {lastMatchAccept#, lastMatchEnd#} ->
                       acceptSwitch lastMatchAccept# lastMatchEnd#
                   _ ->
-                    let !b = W8# (Exts.indexWord8Array# arr# (off# pos))
+                    let !b = W8# (Exts.indexWord8Array# inputArr# (off# pos))
                         !stateId' = nextState# stateTable stateId b
                      in case stateId' of
                           -1# ->
                             case newMatch of
-                              NoLastMatch# -> runOnError newPos {off# = off# newPos +# 1#}
+                              NoLastMatch# -> runOnInvalidUtf8 newPos {off# = off# newPos +# 1#}
                               SomeLastMatch# {lastMatchAccept#, lastMatchEnd#} ->
                                 acceptSwitch lastMatchAccept# lastMatchEnd#
                           _ -> loop stateId' newPos {off# = off# newPos +# 1#} newMatch
@@ -227,10 +222,7 @@ codegen config dfa = do
   body <-
     [|
       withPos $ \pos ->
-        loop
-          $(TH.litE $ TH.intPrimL $ toInteger $ Dfa.start dfa)
-          pos
-          NoLastMatch#
+        loop $(TH.litE $ TH.intPrimL $ toInteger $ Dfa.start dfa) pos NoLastMatch#
       |]
   pure $ TH.LetE decs body
 

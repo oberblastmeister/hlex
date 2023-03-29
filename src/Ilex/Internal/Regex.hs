@@ -103,6 +103,9 @@ exactly n r = fold $ replicate n r
 atLeast :: Int -> Regex -> Regex
 atLeast n r = exactly n r <> many r
 
+dot' :: Regex
+dot' = Set $ CharSet.singletonRange (Char.chr 0x0, Char.chr 0x10ffff)
+
 dot :: Regex
 dot =
   Set $

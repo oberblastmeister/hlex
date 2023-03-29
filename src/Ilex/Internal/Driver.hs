@@ -8,6 +8,7 @@ import Ilex.Internal.Backend.Table qualified as Backend.Table
 import Ilex.Internal.Minimize qualified as Minimize
 import Ilex.Internal.NfaToDfa qualified as NfaToDfa
 import Ilex.Internal.Regex (Regex)
+import Ilex.Internal.Regex qualified as Regex
 import Ilex.Internal.RegexToNfa qualified as RegexToNfa
 import Ilex.Internal.Rule (Rule)
 import Ilex.Internal.Rule qualified as Rule
@@ -35,12 +36,22 @@ ilexFromConfig :: Config -> TH.ExpQ
 ilexFromConfig Config {backendKind, onError, onEof, rules} =
   case backendKind of
     Table -> Backend.Table.codegen backendConfig minDfa'
-    _ -> undefined
   where
-    -- Fun -> Backend.Fun.codegen backendConfig minDfa
-
-    backendConfig = Backend.BackendConfig {onError, onEof}
-    rules' = (\(i, rule) -> Indexed i <$> rule) <$> zip [0 :: Int ..] rules
+    backendConfig = Backend.BackendConfig {onInvalidUtf8 = onError, onEof}
+    -- this is necessary because if no bytes match, the lexer will just return and skip the current byte
+    -- this is bad if the input is utf8 because it could skip the the middle of a multi-byte character
+    -- this can cause the invalid utf-8 to be given to the error handler
+    -- instead, we add a catch all case using Regex.dot'.
+    -- This will always match because 'Text' is always guaranteed to be valid utf8
+    -- In the case of 'ByteString'
+    rulesWithError =
+      rules
+        ++ [ Rule.Rule
+               { regex = Regex.dot',
+                 accept = Rule.Accept {exp = onError, context = Nothing}
+               }
+           ]
+    rules' = (\(i, rule) -> Indexed i <$> rule) <$> zip [0 :: Int ..] rulesWithError
     nfa = RegexToNfa.lexerToNfa rules'
     dfa = NfaToDfa.nfaToDfa nfa
     minDfa = Minimize.minimize dfa
@@ -54,7 +65,7 @@ instance Eq (Indexed a) where
 instance Ord (Indexed a) where
   compare = compare `on` index
 
-data BackendKind = Table | Fun
+data BackendKind = Table
 
 data Config = Config
   { backendKind :: BackendKind,
