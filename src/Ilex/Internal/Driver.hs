@@ -1,6 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Ilex.Internal.Driver where
+module Ilex.Internal.Driver
+  ( ilex,
+    ilexFromConfig,
+    Config (..),
+    BackendKind,
+    matches,
+  )
+where
 
 import Data.Function (on)
 import Ilex.Internal.Backend qualified as Backend

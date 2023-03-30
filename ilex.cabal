@@ -82,6 +82,7 @@ library
   hs-source-dirs: src
   exposed-modules:
     Ilex
+      Ilex.CharSet
       Ilex.Regex
         Ilex.Internal.Monad
         Ilex.Internal.CharSet
@@ -98,7 +99,6 @@ library
         Ilex.Internal.Rule
         Ilex.Internal.Regex
         Ilex.Internal.AssocList
-        Ilex.Internal.Runtime
         Ilex.Internal.ByteString
         Ilex.Internal.Prim
     

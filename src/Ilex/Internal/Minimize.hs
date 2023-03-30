@@ -1,4 +1,10 @@
-module Ilex.Internal.Minimize where
+module Ilex.Internal.Minimize
+  ( minimize,
+    dfaEquivalentStates,
+    validEquivs,
+    isMinimal,
+  )
+where
 
 import Data.Bifunctor (first)
 import Data.Either qualified as Either

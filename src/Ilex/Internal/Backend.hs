@@ -2,7 +2,17 @@
 {-# LANGUAGE NoDuplicateRecordFields #-}
 {-# LANGUAGE NoOverloadedRecordDot #-}
 
-module Ilex.Internal.Backend where
+module Ilex.Internal.Backend
+  ( withInpExp,
+    acceptSwitchExp,
+    acceptSwitchDec,
+    bestDefaultTransition,
+    expandErrorStates,
+    LastMatch# (SomeLastMatch#, NoLastMatch#, lastMatchAccept#, lastMatchEnd#),
+    MaybeRunId# (SomeRunId#, NoRunId#),
+    BackendConfig (..),
+  )
+where
 
 import Data.Function (on)
 import Data.IntMap (IntMap)

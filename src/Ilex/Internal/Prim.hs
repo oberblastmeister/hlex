@@ -1,4 +1,9 @@
-module Ilex.Internal.Prim where
+module Ilex.Internal.Prim
+  ( sameByteArray,
+    sameByteArray#,
+    unI#,
+  )
+where
 
 import Data.Primitive (ByteArray (..))
 import GHC.Exts (ByteArray#, Int (..), Int#, isTrue#, sameMutableByteArray#)

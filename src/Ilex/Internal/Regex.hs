@@ -1,4 +1,29 @@
-module Ilex.Internal.Regex where
+module Ilex.Internal.Regex
+  ( Regex (Null, Empty, ..),
+    null,
+    isNull,
+    alt,
+    cat,
+    isEmpty,
+    empty,
+    set,
+    range,
+    when',
+    when,
+    string,
+    optional,
+    many,
+    some,
+    exactly,
+    atLeast,
+    dot',
+    dot,
+    alpha,
+    digit,
+    isSpace,
+    isAsciiSpace,
+  )
+where
 
 import Data.Char qualified as Char
 import Data.Foldable (fold)

@@ -16,7 +16,7 @@ data Accept = Accept
 type RuleBuilder = RuleBuilder' Accept
 
 newtype RuleBuilder' a b = RuleBuilder
-  { runLexerBuilder :: State ([Rule a]) b
+  { runLexerBuilder :: State [Rule a] b
   }
   deriving
     (Functor, Applicative, Monad, MonadState [Rule a])

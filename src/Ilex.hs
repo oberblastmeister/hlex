@@ -16,6 +16,6 @@ import Ilex.Internal.Monad as X
     isInputEnd,
     isInputStart,
     lexText,
-    mergeInput,
+    spanInput,
   )
 import Ilex.Internal.Rule as X (rule, (~=), (~=?))

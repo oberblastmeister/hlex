@@ -1,6 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Ilex.Internal.Backend.Table where
+module Ilex.Internal.Backend.Table
+  ( matchesDfa,
+    codegen,
+  )
+where
 
 import Control.Monad.State.Strict qualified as State
 import Data.Bits qualified as Bits

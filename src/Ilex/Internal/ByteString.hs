@@ -1,6 +1,6 @@
 {-# LANGUAGE MagicHash #-}
 
-module Ilex.Internal.ByteString where
+module Ilex.Internal.ByteString (unpackByteString) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as B

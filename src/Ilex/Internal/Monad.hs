@@ -6,7 +6,33 @@
 {-# LANGUAGE NoDuplicateRecordFields #-}
 {-# LANGUAGE NoOverloadedRecordDot #-}
 
-module Ilex.Internal.Monad where
+module Ilex.Internal.Monad
+  ( Input# (Input#, inputArr#, inputStart#, inputEnd#, ..),
+    Pos (..),
+    Utf8Status (..),
+    Input (..),
+    Lex,
+    isInputStart,
+    isInputEnd,
+    inputLength,
+    Utf8Input,
+    BytesInput,
+    liftInput#,
+    unliftInput#,
+    getPos,
+    inputFromText,
+    inputFromByteString,
+    inputText,
+    spanInput,
+    Pos# (Pos#, off#, charOff#, ..),
+    defPos#,
+    MonadLexer (..),
+    getRemainingInput,
+    lexInput,
+    lexText,
+    lexByteString,
+  )
+where
 
 import Control.Monad.Cont qualified as Cont
 import Control.Monad.Except qualified as Except
@@ -35,9 +61,6 @@ pattern Input# :: ByteArray# -> Int# -> Int# -> Input# u
 pattern Input# {inputArr#, inputStart#, inputEnd#} = Input## (# inputArr#, inputStart#, inputEnd# #)
 
 {-# COMPLETE Input# #-}
-
-testing :: Input# Utf8 -> Input# Bytes
-testing u = u {inputStart# = 0#}
 
 data Pos = Pos
   { bytePos :: !Int,
@@ -145,8 +168,8 @@ inputText
       (inputEnd - inputStart)
 {-# INLINE inputText #-}
 
-mergeInput :: Input Utf8 -> Input Utf8 -> Input Utf8
-mergeInput
+spanInput :: Input Utf8 -> Input Utf8 -> Input Utf8
+spanInput
   i1@Input
     { inputArr = inputArr1,
       inputStart = inputStart1,
@@ -167,7 +190,7 @@ mergeInput
         error $
           "combineInput: cannot combine inputs sliced from different strings: "
             <> show (inputText i1, inputText i2)
-{-# INLINE mergeInput #-}
+{-# INLINE spanInput #-}
 
 newtype Pos# = Pos## (# Int#, Int# #)
 
@@ -229,14 +252,6 @@ getRemainingInput :: MonadLexer u m => m (Input u)
 getRemainingInput = withInput \i -> withPos \Pos# {off#} ->
   pure $ liftInput# i {inputStart# = off#}
 {-# INLINE getRemainingInput #-}
-
-getCharPos :: MonadLexer u m => m Int
-getCharPos = withPos \Pos# {charOff#} -> pure (I# charOff#)
-{-# INLINE getCharPos #-}
-
-getBytePos :: MonadLexer u m => m Int
-getBytePos = withPos \Pos# {off#} -> pure (I# off#)
-{-# INLINE getBytePos #-}
 
 lexInput :: LexU u s a -> Input u -> s -> (s, a)
 lexInput (Lex f) input s =

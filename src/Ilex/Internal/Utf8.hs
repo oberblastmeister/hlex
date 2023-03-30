@@ -1,6 +1,23 @@
 {-# LANGUAGE MultiWayIf #-}
 
-module Ilex.Internal.Utf8 where
+module Ilex.Internal.Utf8
+  ( encodeCharUtf8,
+    encodeCharUtf8WithInvalid,
+    encodeScalarValueWithInvalid,
+    surrogateRange,
+    splitMaxScalarValues,
+    splitSurrogate,
+    Utf8Amount (..),
+    Utf8Range,
+    Utf8Sequence,
+    matchUtf8Sequence,
+    utf8AmountFromList,
+    utf8Sequences,
+    utf8ScalarRanges,
+    toScalarRange,
+    validScalarRange,
+  )
+where
 
 import Control.Applicative (asum)
 import Control.Monad ((<=<))
@@ -20,9 +37,6 @@ import Numeric.Interval.NonEmpty qualified as I
 type ScalarRange = Interval Int
 
 type Utf8Range = Interval Word8
-
-maxUtf8Bytes :: Int
-maxUtf8Bytes = 4
 
 maxScalarValues :: [Int]
 maxScalarValues = [0x7f, 0x7ff, 0xffff, 0x10ffff]
