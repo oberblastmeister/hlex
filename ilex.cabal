@@ -87,7 +87,6 @@ library
         Ilex.Internal.CharSet
         Ilex.Internal.Driver
         Ilex.Internal.Backend
-          Ilex.Internal.Backend.Fun
           Ilex.Internal.Backend.Table
         Ilex.Internal.Utf8
         Ilex.Internal.Utils
