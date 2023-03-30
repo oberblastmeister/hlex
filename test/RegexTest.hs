@@ -34,7 +34,7 @@ genRegexWith genChar = go
       Gen.recursive
         Gen.choice
         [ pure RE.Empty,
-          RE.Set . CharSet.fromString <$> Gen.list (Range.linear 0 10) genChar
+          RE.Set . CharSet.fromList <$> Gen.list (Range.linear 0 10) genChar
         ]
         [ Gen.subterm2 go go (<>),
           Gen.subterm2 go go (\r r' -> RE.alt [r, r']),

@@ -172,6 +172,11 @@ codegen :: BackendConfig -> Dfa (NonEmpty Rule.Accept) -> TH.ExpQ
 codegen config dfa = do
   dfa <- pure $ shrinkAccepts <$> dfa
   let acceptMap = VB.fromList $ fmap Rule.exp $ concatMap NE.toList $ Dfa.accepts dfa
+      onInvalidUtf8Exp = case onInvalidUtf8 config of
+        -- this error will only happen when lexing bytes, so that it should be okay
+        -- people that lex bytestring should specifically provide the onInvalidUtf8
+        Nothing -> [|error "invalid utf8"|]
+        Just exp -> exp
       allSingle = all (\case _ NE.:| as -> null as) dfa
       checkPredicatesExp =
         if allSingle
@@ -185,7 +190,7 @@ codegen config dfa = do
 
       infoTable = $(liftStorableVectorToAddr# $ generateInfoTable dfa)
 
-      runOnInvalidUtf8 = $(withInpExp (onInvalidUtf8 config))
+      runOnInvalidUtf8 = $(withInpExp onInvalidUtf8Exp)
 
       runOnEof = $(withInpExp (onEof config))
 

@@ -10,12 +10,13 @@
 module SimpleTest where
 
 import Ilex
-import LexerUtils
 import Test.Tasty
 
 testing :: Lex () Int
 testing =
-  $( ilex [|tok 0|] [|tok 1|] $ do
+  $( ilex do
+       OnAny ~=! [|tok 0|]
+       OnEof ~=! [|tok 1|]
        "abc" ~= [|tok 3|]
        "ab" ~=? ([|tok 4|], [|\_ _ -> True|])
        "ab" ~=? ([|tok 2|], [|\_ _ -> True|])

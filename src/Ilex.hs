@@ -9,6 +9,7 @@ import Ilex.Internal.Monad as X
     Input,
     Lex,
     Pos (..),
+    Utf8Input,
     Utf8Status (..),
     getPos,
     inputLength,
@@ -18,4 +19,16 @@ import Ilex.Internal.Monad as X
     lexText,
     spanInput,
   )
-import Ilex.Internal.Rule as X (rule, (~=), (~=?))
+import Ilex.Internal.Rule as X
+  ( SpecialRule (..),
+    rule,
+    ruleAny,
+    ruleCatchAll,
+    ruleContext,
+    ruleEof,
+    ruleInvalidUtf8,
+    ruleSpecial,
+    (~=),
+    (~=!),
+    (~=?),
+  )

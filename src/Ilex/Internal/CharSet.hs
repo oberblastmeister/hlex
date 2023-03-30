@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Ilex.Internal.CharSet
   ( CharSet (..),
     empty,
@@ -8,7 +10,7 @@ module Ilex.Internal.CharSet
     intersection,
     toList,
     toRangeList,
-    fromString,
+    fromList,
     fromPred,
     null,
     singletonRange,
@@ -18,10 +20,17 @@ where
 
 import Data.RangeSet.List (RSet)
 import Data.RangeSet.List qualified as RSet
+import GHC.Exts (IsList (Item))
+import GHC.Exts qualified
 import Prelude hiding (null)
 
 newtype CharSet = CharSet {unCharSet :: RSet Char}
   deriving (Show, Eq, Ord, Semigroup, Monoid) via RSet Char
+
+instance IsList CharSet where
+  type Item CharSet = Char
+  fromList = CharSet . RSet.fromList
+  toList = RSet.toList . unCharSet
 
 empty :: CharSet
 empty = CharSet RSet.empty
@@ -56,8 +65,8 @@ toList = RSet.toList . unCharSet
 toRangeList :: CharSet -> [(Char, Char)]
 toRangeList = RSet.toRangeList . unCharSet
 
-fromString :: [Char] -> CharSet
-fromString = CharSet . RSet.fromList
+fromList :: [Char] -> CharSet
+fromList = CharSet . RSet.fromList
 
 fromPred :: (Char -> Bool) -> CharSet
 fromPred f = CharSet . RSet.fromAscList . filter f $ [minBound .. maxBound]

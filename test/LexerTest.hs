@@ -47,7 +47,7 @@ data Token
 
 lexer :: Pos -> Lex () (Spanned Token)
 lexer start =
-  $( ilex [|tok $ Error "unknown"|] [|tok Eof|] do
+  $( ilex do
        "forall" ~= [|tok Forall|]
        "if" ~= [|tok If|]
        "let" ~= [|tok Let|]
@@ -84,6 +84,8 @@ lexer start =
                Left e -> Error e
                Right x -> String x
            |]
+       OnAny ~=! [|tok $ Error "unknown"|]
+       OnEof ~=! [|tok Eof|]
    )
   where
     tok = spanned . const
@@ -93,7 +95,7 @@ lexer start =
     skip = const $ lexer =<< getPos
     comment = spanned $ Comment . inputText
     lexString cs =
-      $( ilex [|\_ -> Except.throwError "unsupposed string character"|] [|\_ -> Except.throwError "unclosed string"|] do
+      $( ilex do
            "\"" ~= [|\_ -> pure $! T.pack $ reverse $ '"' : cs|]
            "\\n" ~= [|addChar '\n'|]
            "\\t" ~= [|addChar '\t'|]
@@ -108,6 +110,8 @@ lexer start =
                    Nothing -> error "impossible"
                    Just (c, _) -> lexString $ c : cs
                |]
+           OnAny ~=! [|\_ -> Except.throwError "unsupposed string character"|]
+           OnEof ~=! [|\_ -> Except.throwError "unclosed string"|]
        )
       where
         addChar c _i = lexString $ c : cs

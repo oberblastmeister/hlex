@@ -98,8 +98,8 @@ pattern Empty <- (isEmpty -> True)
 empty :: Regex
 empty = Empty
 
-set :: CharSet -> Regex
-set = Set
+set :: [Char] -> Regex
+set = Set . CharSet.fromList
 
 range :: (Char, Char) -> Regex
 range = Set . CharSet.singletonRange
@@ -138,7 +138,7 @@ dot =
       CharSet.\\ CharSet.singleton '\n'
 
 alpha :: Regex
-alpha = set $ CharSet.singletonRange ('a', 'z') <> CharSet.singletonRange ('A', 'Z')
+alpha = Set $ CharSet.singletonRange ('a', 'z') <> CharSet.singletonRange ('A', 'Z')
 
 digit :: Regex
 digit = range ('0', '9')

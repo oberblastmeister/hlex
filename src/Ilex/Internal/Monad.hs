@@ -68,9 +68,7 @@ data Pos = Pos
   }
   deriving (Show, Eq, Ord, Generic)
 
-data Utf8Status
-  = Utf8
-  | Bytes
+data Utf8Status = Utf8 | Bytes
 
 type role Input nominal
 

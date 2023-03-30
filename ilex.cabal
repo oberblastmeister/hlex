@@ -115,6 +115,8 @@ test-suite ilex-test
   hs-source-dirs: test
   main-is: Main.hs
   other-modules:
+    LuaTest
+    LuaRegex
     LexerUtils
     TestUtils
     MinimizeTest

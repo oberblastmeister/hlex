@@ -47,7 +47,7 @@ pattern SomeLastMatch# {lastMatchAccept#, lastMatchEnd#} = LastMatch# (# | (# la
 {-# COMPLETE NoLastMatch#, SomeLastMatch# #-}
 
 data BackendConfig = BackendConfig
-  { onInvalidUtf8 :: TH.ExpQ,
+  { onInvalidUtf8 :: Maybe TH.ExpQ,
     onEof :: TH.ExpQ
   }
 

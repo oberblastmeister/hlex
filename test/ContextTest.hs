@@ -15,11 +15,13 @@ import TestUtils (testGoldenInShow)
 
 lexer :: Int -> Lex () Int
 lexer n =
-  $( ilex [|tok 0|] [|tok 1|] $ do
+  $( ilex do
        "ab" ~=? ([|tok 5|], [|\_ i -> $(matches "zz") i|])
        "ab" ~=? ([|tok 2|], [|\_ _ -> n == 0|])
        "ab" ~=? ([|tok 3|], [|\_ _ -> n == 1|])
        "ab" ~=? ([|tok 4|], [|\_ _ -> n == 2|])
+       OnAny ~=! [|tok 0|]
+       OnEof ~=! [|tok 1|]
    )
   where
     tok = const . pure
