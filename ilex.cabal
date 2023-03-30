@@ -71,7 +71,7 @@ common common-options
     hashable,
     containers,
     pvector >= 0.1.1,
-    mtl >= 2.3.1,
+    mtl,
     primitive,
     vector,
     range-set-list,

@@ -3,9 +3,8 @@
 
 module Ilex.Internal.Rule where
 
-import Control.Monad.Writer.CPS (MonadWriter, Writer)
-import Control.Monad.Writer.CPS qualified as Writer
-import Data.Monoid (Dual (..))
+import Control.Monad.State.Strict (MonadState, State)
+import Control.Monad.State.Strict qualified as State
 import Ilex.Internal.Regex
 import Language.Haskell.TH qualified as TH
 
@@ -17,11 +16,11 @@ data Accept = Accept
 type RuleBuilder = RuleBuilder' Accept
 
 newtype RuleBuilder' a b = RuleBuilder
-  { runLexerBuilder :: Writer (Dual [Rule a]) b
+  { runLexerBuilder :: State ([Rule a]) b
   }
   deriving
-    (Functor, Applicative, Monad, MonadWriter (Dual [Rule a]))
-    via (Writer (Dual [Rule a]))
+    (Functor, Applicative, Monad, MonadState [Rule a])
+    via (State [Rule a])
 
 data Rule a = Rule
   { regex :: Regex,
@@ -30,10 +29,10 @@ data Rule a = Rule
   deriving (Functor)
 
 rule :: Regex -> TH.ExpQ -> RuleBuilder ()
-rule regex exp = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context = Nothing}}]
+rule regex exp = State.modify (Rule {regex, accept = Accept {exp, context = Nothing}} :)
 
 ruleContext :: Regex -> (TH.ExpQ, TH.ExpQ) -> RuleBuilder ()
-ruleContext regex (exp, context) = Writer.tell $ Dual [Rule {regex, accept = Accept {exp, context = Just context}}]
+ruleContext regex (exp, context) = State.modify (Rule {regex, accept = Accept {exp, context = Just context}} :)
 
 (~=) :: Regex -> TH.ExpQ -> RuleBuilder ()
 (~=) = rule
@@ -42,4 +41,4 @@ ruleContext regex (exp, context) = Writer.tell $ Dual [Rule {regex, accept = Acc
 (~=?) = ruleContext
 
 evalRuleBuilder :: RuleBuilder () -> [Rule Accept]
-evalRuleBuilder = reverse . getDual . Writer.execWriter . runLexerBuilder
+evalRuleBuilder = reverse . flip State.execState [] . runLexerBuilder

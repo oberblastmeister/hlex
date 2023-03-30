@@ -1,2 +1,2 @@
-installed: +all -text -parsec -mtl
+installed: +all -text -parsec
 cabal-check: False
