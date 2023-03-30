@@ -1,6 +1,5 @@
 packages:
     ./
-    ../pvector
 
 tests: True
 test-show-details: direct

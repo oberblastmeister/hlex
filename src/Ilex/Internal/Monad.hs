@@ -18,14 +18,16 @@ import Data.ByteString (ByteString)
 import Data.Functor (($>))
 import Data.Primitive (ByteArray#)
 import Data.Primitive qualified as Primitive
+import Data.String (IsString)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Text.Array qualified
 import Data.Text.Internal qualified
 import GHC.Exts (Int (..), Int#, (+#), (-#))
 import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
 import Ilex.Internal.ByteString (unpackByteString)
-import Ilex.Internal.Prim (sameByteArray)
+import Ilex.Internal.Prim (sameByteArray, unI#)
 
 newtype Input# (u :: Utf8Status) = Input## (# ByteArray#, Int#, Int# #)
 
@@ -70,6 +72,9 @@ inputLength Input {inputStart, inputEnd} = inputEnd - inputStart
 instance Show (Input Utf8) where
   show = show . inputText
 
+instance IsString (Input Utf8) where
+  fromString = inputFromText . T.pack
+
 instance Eq (Input us) where
   i == i' = inputLength i == inputLength i' && compare i i' == EQ
 
@@ -89,6 +94,15 @@ liftInput# Input# {inputArr#, inputStart#, inputEnd#} =
     }
 {-# INLINE liftInput# #-}
 
+unliftInput# :: Input u -> Input# u
+unliftInput# Input {inputArr = Primitive.ByteArray inputArr#, inputStart, inputEnd} =
+  Input#
+    { inputArr#,
+      inputStart# = unI# inputStart,
+      inputEnd# = unI# inputEnd
+    }
+{-# INLINE unliftInput# #-}
+
 getPos :: MonadLexer u m => m Pos
 getPos = withPos \Pos# {off#, charOff#} -> do
   withInput \Input# {inputStart#} -> do
@@ -96,6 +110,26 @@ getPos = withPos \Pos# {off#, charOff#} -> do
     let charPos = I# charOff#
     pure Pos {bytePos, charPos}
 {-# INLINE getPos #-}
+
+inputFromText :: Text -> Input Utf8
+inputFromText (Data.Text.Internal.Text (Data.Text.Array.ByteArray arr) off len) =
+  Input
+    { inputArr = Primitive.ByteArray arr,
+      inputStart = off,
+      inputEnd = off + len
+    }
+{-# INLINE inputFromText #-}
+
+inputFromByteString :: ByteString -> Input Bytes
+inputFromByteString bytestring =
+  Input
+    { inputArr = arr,
+      inputStart = off,
+      inputEnd = endOff
+    }
+  where
+    !(arr, off, endOff) = unpackByteString bytestring
+{-# INLINE inputFromByteString #-}
 
 inputText :: Input Utf8 -> Text
 inputText
@@ -141,6 +175,10 @@ pattern Pos# :: Int# -> Int# -> Pos#
 pattern Pos# {off#, charOff#} = Pos## (# off#, charOff# #)
 
 {-# COMPLETE Pos# #-}
+
+defPos# :: (# #) -> Pos#
+defPos# _ = Pos# 0# 0#
+{-# INLINE defPos# #-}
 
 class Monad m => MonadLexer u m | m -> u where
   withInput :: (Input# u -> m a) -> m a
@@ -200,17 +238,17 @@ getBytePos :: MonadLexer u m => m Int
 getBytePos = withPos \Pos# {off#} -> pure (I# off#)
 {-# INLINE getBytePos #-}
 
-lexText :: Lex s a -> Text -> s -> (s, a)
-lexText (Lex f) (Data.Text.Internal.Text (Data.Text.Array.ByteArray bs) (I# off#) (I# len#)) s =
-  case f (Input# {inputArr# = bs, inputEnd# = off# +# len#, inputStart# = off#}) (Pos# {off# = off#, charOff# = 0#}) s of
+lexInput :: LexU u s a -> Input u -> s -> (s, a)
+lexInput (Lex f) input s =
+  case f (unliftInput# input) (defPos# (# #)) s of
     (# _, s, a #) -> (s, a)
+{-# INLINE lexInput #-}
 
-lexByteString :: LexU u s a -> ByteString -> s -> (s, a)
-lexByteString (Lex f) bytestring s =
-  case f (Input# {inputArr# = bs, inputEnd# = inputEnd#, inputStart# = off#}) (Pos# {off# = off#, charOff# = 0#}) s of
-    (# _, s, a #) -> (s, a)
-  where
-    !(Primitive.ByteArray bs, I# off#, I# inputEnd#) = unpackByteString bytestring
+lexText :: Lex s a -> Text -> s -> (s, a)
+lexText lex = lexInput lex . inputFromText
+
+lexByteString :: LexU Bytes s a -> ByteString -> s -> (s, a)
+lexByteString lex = lexInput lex . inputFromByteString
 
 type Lex = LexU Utf8
 

@@ -1,0 +1,2 @@
+installed: +all -text -parsec
+cabal-check: False

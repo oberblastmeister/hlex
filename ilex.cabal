@@ -21,6 +21,8 @@ maintainer:         littlebubu.shu@gmail.com
 -- category:
 extra-source-files: CHANGELOG.md
 
+tested-with: GHC == 9.2.6, GHC == 9.4.4, GHC == 9.6.1
+
 common common-options
   default-language: GHC2021
   default-extensions:
@@ -68,7 +70,7 @@ common common-options
     unordered-containers,
     hashable,
     containers,
-    pvector,
+    pvector >= 0.1.1,
     mtl >= 2.3.1,
     primitive,
     vector,
