@@ -23,7 +23,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Array qualified
 import Data.Text.Internal qualified
-import GHC.Exts (Int (..), Int#, (+#), (-#))
+import GHC.Exts (Int (..), Int#, (-#))
 import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
 import Ilex.Internal.ByteString (unpackByteString)
