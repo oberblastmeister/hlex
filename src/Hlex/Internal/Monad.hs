@@ -6,7 +6,7 @@
 {-# LANGUAGE NoDuplicateRecordFields #-}
 {-# LANGUAGE NoOverloadedRecordDot #-}
 
-module Ilex.Internal.Monad
+module Hlex.Internal.Monad
   ( Input# (Input#, inputArr#, inputStart#, inputEnd#, ..),
     Pos (..),
     Utf8Status (..),
@@ -52,8 +52,8 @@ import Data.Text.Internal qualified
 import GHC.Exts (Int (..), Int#, (-#))
 import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
-import Ilex.Internal.ByteString (unpackByteString)
-import Ilex.Internal.Prim (sameByteArray, unI#)
+import Hlex.Internal.ByteString (unpackByteString)
+import Hlex.Internal.Prim (sameByteArray, unI#)
 
 newtype Input# (u :: Utf8Status) = Input## (# ByteArray#, Int#, Int# #)
 

@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Ilex.Internal.Driver
-  ( ilex,
-    ilexFromConfig,
+module Hlex.Internal.Driver
+  ( hlex,
+    hlexFromConfig,
     Config (..),
     BackendKind,
     matches,
@@ -10,21 +10,21 @@ module Ilex.Internal.Driver
 where
 
 import Data.Function (on)
-import Ilex.Internal.Backend qualified as Backend
-import Ilex.Internal.Backend.Table qualified as Backend.Table
-import Ilex.Internal.Minimize qualified as Minimize
-import Ilex.Internal.NfaToDfa qualified as NfaToDfa
-import Ilex.Internal.Regex (Regex)
-import Ilex.Internal.Regex qualified as Regex
-import Ilex.Internal.RegexToNfa qualified as RegexToNfa
-import Ilex.Internal.Rule (Rules)
-import Ilex.Internal.Rule qualified as Rule
+import Hlex.Internal.Backend qualified as Backend
+import Hlex.Internal.Backend.Table qualified as Backend.Table
+import Hlex.Internal.Minimize qualified as Minimize
+import Hlex.Internal.NfaToDfa qualified as NfaToDfa
+import Hlex.Internal.Regex (Regex)
+import Hlex.Internal.Regex qualified as Regex
+import Hlex.Internal.RegexToNfa qualified as RegexToNfa
+import Hlex.Internal.Rule (Rules)
+import Hlex.Internal.Rule qualified as Rule
 import Language.Haskell.TH qualified as TH
 import Prelude hiding (lex)
 
-ilex :: Rule.RuleBuilder () -> TH.ExpQ
-ilex builder =
-  ilexFromConfig
+hlex :: Rule.RuleBuilder () -> TH.ExpQ
+hlex builder =
+  hlexFromConfig
     Config
       { backendKind = Table,
         rules = Rule.evalRuleBuilder builder
@@ -37,8 +37,8 @@ matches r = Backend.Table.matchesDfa minDfa
     dfa = NfaToDfa.nfaToDfa nfa
     minDfa = Minimize.minimize dfa
 
-ilexFromConfig :: Config -> TH.ExpQ
-ilexFromConfig Config {backendKind, rules} = do
+hlexFromConfig :: Config -> TH.ExpQ
+hlexFromConfig Config {backendKind, rules} = do
   anyRule <- case Rule.rulesAny rules of
     Nothing -> fail "lexer does not cover all cases"
     Just exp -> pure exp

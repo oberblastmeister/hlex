@@ -1,4 +1,4 @@
-module Ilex.Internal.RegexToNfa
+module Hlex.Internal.RegexToNfa
   ( lexerToNfa,
     regexToNfa,
   )
@@ -13,14 +13,14 @@ import Data.IntSet qualified as IntSet
 import Data.List.NonEmpty qualified as NE
 import Data.Vector qualified as VB
 import Data.Vector.Persistent qualified as PVec
-import Ilex.Internal.CharSet (CharSet)
-import Ilex.Internal.CharSet qualified as CharSet
-import Ilex.Internal.Nfa (Nfa (Nfa))
-import Ilex.Internal.Nfa qualified as Nfa
-import Ilex.Internal.Regex qualified as RE
-import Ilex.Internal.Rule (Rule (..))
-import Ilex.Internal.Utf8
-import Ilex.Internal.Utils
+import Hlex.Internal.CharSet (CharSet)
+import Hlex.Internal.CharSet qualified as CharSet
+import Hlex.Internal.Nfa (Nfa (Nfa))
+import Hlex.Internal.Nfa qualified as Nfa
+import Hlex.Internal.Regex qualified as RE
+import Hlex.Internal.Rule (Rule (..))
+import Hlex.Internal.Utf8
+import Hlex.Internal.Utils
 import Numeric.Interval.NonEmpty ((...))
 
 data NfaBuilder a = NfaBuilder

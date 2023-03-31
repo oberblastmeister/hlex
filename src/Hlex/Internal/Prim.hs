@@ -1,4 +1,4 @@
-module Ilex.Internal.Prim
+module Hlex.Internal.Prim
   ( sameByteArray,
     sameByteArray#,
     unI#,

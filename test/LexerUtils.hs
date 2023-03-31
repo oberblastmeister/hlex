@@ -1,7 +1,7 @@
 module LexerUtils where
 
-import Ilex
-import Ilex.Internal.Regex qualified as R
+import Hlex
+import Hlex.Internal.Regex qualified as R
 
 data Span = Span
   { start :: !Pos,

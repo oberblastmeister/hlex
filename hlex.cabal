@@ -1,5 +1,5 @@
 cabal-version:      3.6
-name:               ilex
+name:               hlex
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
@@ -81,26 +81,26 @@ library
   import: common-options
   hs-source-dirs: src
   exposed-modules:
-    Ilex
-      Ilex.CharSet
-      Ilex.Regex
-        Ilex.Internal.Monad
-        Ilex.Internal.CharSet
-        Ilex.Internal.Driver
-        Ilex.Internal.Backend
-          Ilex.Internal.Backend.Table
-        Ilex.Internal.Utf8
-        Ilex.Internal.Utils
-        Ilex.Internal.Dfa
-        Ilex.Internal.Nfa
-        Ilex.Internal.RegexToNfa
-        Ilex.Internal.NfaToDfa
-        Ilex.Internal.Minimize
-        Ilex.Internal.Rule
-        Ilex.Internal.Regex
-        Ilex.Internal.AssocList
-        Ilex.Internal.ByteString
-        Ilex.Internal.Prim
+    Hlex
+      Hlex.CharSet
+      Hlex.Regex
+        Hlex.Internal.Monad
+        Hlex.Internal.CharSet
+        Hlex.Internal.Driver
+        Hlex.Internal.Backend
+          Hlex.Internal.Backend.Table
+        Hlex.Internal.Utf8
+        Hlex.Internal.Utils
+        Hlex.Internal.Dfa
+        Hlex.Internal.Nfa
+        Hlex.Internal.RegexToNfa
+        Hlex.Internal.NfaToDfa
+        Hlex.Internal.Minimize
+        Hlex.Internal.Rule
+        Hlex.Internal.Regex
+        Hlex.Internal.AssocList
+        Hlex.Internal.ByteString
+        Hlex.Internal.Prim
     
 
 common rtsopts
@@ -109,7 +109,7 @@ common rtsopts
     -rtsopts
     -with-rtsopts=-N
 
-test-suite ilex-test
+test-suite hlex-test
   import: common-options, rtsopts
   type: exitcode-stdio-1.0
   hs-source-dirs: test
@@ -126,7 +126,7 @@ test-suite ilex-test
     SimpleTest
     ContextTest
   build-depends:
-    ilex,
+    hlex,
     tasty,
     tasty-hedgehog,
     tasty-golden,
@@ -135,11 +135,11 @@ test-suite ilex-test
     pretty-simple,
     filepath,
 
-benchmark ilex-bench
+benchmark hlex-bench
   import: common-options, rtsopts
   type: exitcode-stdio-1.0
   hs-source-dirs: bench
   main-is: Main.hs
   build-depends:
-    ilex,
+    hlex,
     tasty-bench ^>= 0.3.1,

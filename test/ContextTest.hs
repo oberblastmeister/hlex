@@ -8,14 +8,14 @@
 
 module ContextTest where
 
-import Ilex
+import Hlex
 import LexerUtils (lexUntil)
 import Test.Tasty
 import TestUtils (testGoldenInShow)
 
 lexer :: Int -> Lex () Int
 lexer n =
-  $( ilex do
+  $( hlex do
        "ab" ~=? ([|tok 5|], [|\_ i -> $(matches "zz") i|])
        "ab" ~=? ([|tok 2|], [|\_ _ -> n == 0|])
        "ab" ~=? ([|tok 3|], [|\_ _ -> n == 1|])

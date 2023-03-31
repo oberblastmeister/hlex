@@ -1,4 +1,4 @@
-module Ilex.Internal.Minimize
+module Hlex.Internal.Minimize
   ( minimize,
     dfaEquivalentStates,
     validEquivs,
@@ -23,9 +23,9 @@ import Data.List qualified as List
 import Data.Maybe (fromJust)
 import Data.Vector qualified as VB
 import GHC.Exts (fromList, toList)
-import Ilex.Internal.AssocList qualified as AssocList
-import Ilex.Internal.Dfa (Dfa, Dfa' (Dfa))
-import Ilex.Internal.Dfa qualified as Dfa
+import Hlex.Internal.AssocList qualified as AssocList
+import Hlex.Internal.Dfa (Dfa, Dfa' (Dfa))
+import Hlex.Internal.Dfa qualified as Dfa
 
 -- % Hopcroft's Algorithm for DFA minimization (cut/pasted from Wikipedia): % X refines Y into Y1 and Y2 means
 -- %  Y1 := Y ∩ X

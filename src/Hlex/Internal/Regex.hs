@@ -1,4 +1,4 @@
-module Ilex.Internal.Regex
+module Hlex.Internal.Regex
   ( Regex (Null, Empty, ..),
     null,
     isNull,
@@ -30,8 +30,8 @@ import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NE
 import Data.String (IsString (..))
-import Ilex.Internal.CharSet (CharSet)
-import Ilex.Internal.CharSet qualified as CharSet
+import Hlex.Internal.CharSet (CharSet)
+import Hlex.Internal.CharSet qualified as CharSet
 import Prelude hiding (null)
 
 data Regex

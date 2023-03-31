@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Ilex.Internal.Dfa
+module Hlex.Internal.Dfa
   ( Pdfa,
     Dfa,
     Dfa' (..),
@@ -38,7 +38,7 @@ import Data.Maybe (fromJust, mapMaybe)
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (fromList)
-import Ilex.Internal.AssocList (AssocList)
+import Hlex.Internal.AssocList (AssocList)
 
 -- dfa using sets of nfa states
 type Pdfa = Dfa' (HashMap StateSet) StateSet

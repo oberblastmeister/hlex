@@ -1,14 +1,14 @@
-module Ilex.Internal.NfaToDfa
+module Hlex.Internal.NfaToDfa
   ( nfaToDfa,
   )
 where
 
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet qualified as IntSet
-import Ilex.Internal.Dfa (Dfa, Dfa' (Dfa), Pdfa)
-import Ilex.Internal.Dfa qualified as Dfa
-import Ilex.Internal.Nfa (Nfa (Nfa))
-import Ilex.Internal.Nfa qualified as Nfa
+import Hlex.Internal.Dfa (Dfa, Dfa' (Dfa), Pdfa)
+import Hlex.Internal.Dfa qualified as Dfa
+import Hlex.Internal.Nfa (Nfa (Nfa))
+import Hlex.Internal.Nfa qualified as Nfa
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NE
 

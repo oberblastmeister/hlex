@@ -1,4 +1,4 @@
-module Ilex.Internal.Nfa
+module Hlex.Internal.Nfa
   ( Nfa (..),
     State (..),
     ByteSet,
@@ -32,8 +32,8 @@ import Data.List.NonEmpty qualified as NE
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (toList)
-import Ilex.Internal.Utf8 (Utf8Range)
-import Ilex.Internal.Utils
+import Hlex.Internal.Utf8 (Utf8Range)
+import Hlex.Internal.Utils
 import Numeric.Interval.NonEmpty qualified as I
 
 type StateId = Int

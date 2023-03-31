@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Ilex.Internal.CharSet
+module Hlex.Internal.CharSet
   ( CharSet (..),
     empty,
     singleton,

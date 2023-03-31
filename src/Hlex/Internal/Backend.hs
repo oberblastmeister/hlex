@@ -2,7 +2,7 @@
 {-# LANGUAGE NoDuplicateRecordFields #-}
 {-# LANGUAGE NoOverloadedRecordDot #-}
 
-module Ilex.Internal.Backend
+module Hlex.Internal.Backend
   ( withInpExp,
     acceptSwitchExp,
     acceptSwitchDec,
@@ -23,7 +23,7 @@ import Data.Maybe qualified as Maybe
 import Data.Vector qualified as VB
 import Data.Word (Word8)
 import GHC.Exts (Int#)
-import Ilex.Internal.Monad
+import Hlex.Internal.Monad
 import Language.Haskell.TH qualified as TH
 
 newtype MaybeRunId# = MaybeRunId# (# (# #) | (# Int# #) #)

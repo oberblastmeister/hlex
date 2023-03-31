@@ -1,11 +1,11 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Ilex.Internal.Rule where
+module Hlex.Internal.Rule where
 
 import Control.Monad.State.Strict (MonadState, State)
 import Control.Monad.State.Strict qualified as State
-import Ilex.Internal.Regex
+import Hlex.Internal.Regex
 import Language.Haskell.TH qualified as TH
 
 data Accept = Accept

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Ilex.Internal.Backend.Table
+module Hlex.Internal.Backend.Table
   ( matchesDfa,
     codegen,
   )
@@ -25,12 +25,12 @@ import GHC.Exts (Addr#, Int (..), Int#, (*#), (+#), (>=#))
 import GHC.Exts qualified as Exts
 import GHC.Int (Int32 (I32#))
 import GHC.Word (Word32 (W32#), Word8 (W8#))
-import Ilex.Internal.Backend
-import Ilex.Internal.Dfa (Dfa)
-import Ilex.Internal.Dfa qualified as Dfa
-import Ilex.Internal.Monad
-import Ilex.Internal.Prim (unI#)
-import Ilex.Internal.Rule qualified as Rule
+import Hlex.Internal.Backend
+import Hlex.Internal.Dfa (Dfa)
+import Hlex.Internal.Dfa qualified as Dfa
+import Hlex.Internal.Monad
+import Hlex.Internal.Prim (unI#)
+import Hlex.Internal.Rule qualified as Rule
 import Language.Haskell.TH qualified as TH
 
 -- (state, byte) -> state

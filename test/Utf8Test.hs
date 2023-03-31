@@ -13,7 +13,7 @@ import Numeric.Interval.NonEmpty qualified as I
 import Test.Tasty
 import Test.Tasty.HUnit qualified as HU
 import Test.Tasty.Hedgehog
-import Ilex.Internal.Utf8
+import Hlex.Internal.Utf8
 
 genInterval :: Ord a => Gen a -> Gen (Interval a)
 genInterval gen = (...) <$> gen <*> gen

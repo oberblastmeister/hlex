@@ -10,8 +10,8 @@ module LuaTest where
 import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Data.Text qualified as T
-import Ilex
-import Ilex.Regex qualified as R
+import Hlex
+import Hlex.Regex qualified as R
 import LexerUtils
 import LuaRegex
 import Test.Tasty
@@ -83,7 +83,7 @@ lexMain = lexMain' =<< getPos
 
 lexMain' :: Pos -> Lex () (Spanned Token)
 lexMain' start =
-  $( ilex do
+  $( hlex do
        rWhitespace ~= [|skip|]
 
        "+" ~= [|tok Plus|]
@@ -155,7 +155,7 @@ lexMain' start =
 
 lexComment :: Lex () (Spanned Token)
 lexComment =
-  $( ilex do
+  $( hlex do
        "\n" ~= [|\_ -> lexMain|]
        R.dot ~= [|\_ -> lexComment|]
        CatchAll ~=! [|\_ -> lexMain|]
@@ -165,7 +165,7 @@ lexString :: StringQuoteKind -> String -> Lex () (Either Text Text)
 lexString quoteKind = go
   where
     go cs =
-      $( ilex do
+      $( hlex do
            "\""
              ~= [|
                \_ -> case quoteKind of

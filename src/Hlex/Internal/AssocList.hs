@@ -1,4 +1,4 @@
-module Ilex.Internal.AssocList
+module Hlex.Internal.AssocList
   ( AssocList (..),
     fromList,
     toList,
@@ -24,8 +24,8 @@ instance Bifunctor AssocList where
 
 instance IsList (AssocList k v) where
   type Item (AssocList k v) = (k, v)
-  fromList = Ilex.Internal.AssocList.fromList
-  toList = Ilex.Internal.AssocList.toList
+  fromList = Hlex.Internal.AssocList.fromList
+  toList = Hlex.Internal.AssocList.toList
 
 fromList :: [(k, v)] -> AssocList k v
 fromList = AssocList

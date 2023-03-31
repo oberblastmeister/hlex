@@ -1,6 +1,6 @@
 module LuaRegex where
 
-import Ilex.Regex qualified as R
+import Hlex.Regex qualified as R
 
 rWhitespace = R.alt [R.set [' ', '\t', '\n'], "\r\n"]
 

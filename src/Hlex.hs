@@ -1,10 +1,10 @@
-module Ilex
+module Hlex
   ( module X,
   )
 where
 
-import Ilex.Internal.Driver as X (ilex, matches)
-import Ilex.Internal.Monad as X
+import Hlex.Internal.Driver as X (hlex, matches)
+import Hlex.Internal.Monad as X
   ( BytesInput,
     Input,
     Lex,
@@ -19,7 +19,7 @@ import Ilex.Internal.Monad as X
     lexText,
     spanInput,
   )
-import Ilex.Internal.Rule as X
+import Hlex.Internal.Rule as X
   ( SpecialRule (..),
     rule,
     ruleAny,

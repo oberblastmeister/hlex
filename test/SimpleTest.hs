@@ -10,15 +10,15 @@
 module SimpleTest where
 
 import Data.Text (Text)
-import Ilex
-import Ilex.Regex qualified as R
+import Hlex
+import Hlex.Regex qualified as R
 import LexerUtils (lexUntil)
 import Test.Tasty
 import TestUtils (testGoldenInShow)
 
 testing :: Lex () Int
 testing =
-  $( ilex do
+  $( hlex do
        OnAny ~=! [|tok 0|]
        OnEof ~=! [|tok 1|]
        "abc" ~= [|tok 3|]
@@ -31,7 +31,7 @@ testing =
 prefix :: Lex () [Text]
 prefix =
   lexUntil (== "eof") $
-    $( ilex do
+    $( hlex do
          "a" ~= [|pure . inputText|]
          R.cat [R.some "a", "b"] ~= [|pure . inputText|]
          OnAny ~=! [|\_ -> pure "other"|]

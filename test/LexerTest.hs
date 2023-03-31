@@ -10,8 +10,8 @@ module LexerTest where
 import Control.Monad.Except qualified as Except
 import Data.Text (Text)
 import Data.Text qualified as T
-import Ilex
-import Ilex.Regex qualified as R
+import Hlex
+import Hlex.Regex qualified as R
 import LexerUtils
 import Test.Tasty
 import TestUtils
@@ -47,7 +47,7 @@ data Token
 
 lexer :: Pos -> Lex () (Spanned Token)
 lexer start =
-  $( ilex do
+  $( hlex do
        "forall" ~= [|tok Forall|]
        "if" ~= [|tok If|]
        "let" ~= [|tok Let|]
@@ -95,7 +95,7 @@ lexer start =
     skip = const $ lexer =<< getPos
     comment = spanned $ Comment . inputText
     lexString cs =
-      $( ilex do
+      $( hlex do
            "\"" ~= [|\_ -> pure $! T.pack $ reverse $ '"' : cs|]
            "\\n" ~= [|addChar '\n'|]
            "\\t" ~= [|addChar '\t'|]
@@ -105,7 +105,7 @@ lexer start =
            R.dot
              ~= [|
                \i -> do
-                 let t = Ilex.inputText i
+                 let t = Hlex.inputText i
                  case T.uncons t of
                    Nothing -> error "impossible"
                    Just (c, _) -> lexString $ c : cs

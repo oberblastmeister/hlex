@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 
-module Ilex.Internal.Utf8
+module Hlex.Internal.Utf8
   ( encodeCharUtf8,
     encodeCharUtf8WithInvalid,
     encodeScalarValueWithInvalid,
