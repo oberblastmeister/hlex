@@ -1,5 +1,6 @@
 import ContextTest qualified
 import LexerTest qualified
+import LuaTest qualified
 import MinimizeTest qualified
 import RegexTest qualified
 import SimpleTest qualified
@@ -16,5 +17,6 @@ main =
         MinimizeTest.tests,
         RegexTest.tests,
         LexerTest.tests,
-        ContextTest.tests
+        ContextTest.tests,
+        LuaTest.tests
       ]

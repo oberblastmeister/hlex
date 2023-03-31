@@ -15,9 +15,11 @@ import Hlex.Regex qualified as R
 import LexerUtils
 import LuaRegex
 import Test.Tasty
+import Test.Tasty.HUnit
+import TestUtils (testGoldenInShow)
 
 data Token
-  = Error
+  = Error !Text
   | Eof
   | -- operators
     Plus
@@ -75,8 +77,12 @@ data Token
   | Number !Text
   | -- name
     Name !Text
+  deriving (Show, Eq)
 
 data StringQuoteKind = SingleQuote | DoubleQuote
+
+lexAll :: Lex () [Spanned Token]
+lexAll = lexUntil ((== Eof) . value) lexMain
 
 lexMain :: Lex () (Spanned Token)
 lexMain = lexMain' =<< getPos
@@ -139,15 +145,27 @@ lexMain' start =
        "until" ~= [|tok Until|]
        "while" ~= [|tok While|]
 
+       "\"" ~= [|withQuote DoubleQuote|]
+       "'" ~= [|withQuote SingleQuote|]
+
+       -- names
+       R.cat [rVarStart, R.many rVarContinue] ~= [|spanned $ Name . inputText|]
+
        -- numbers
        rNumber ~= [|spanned $ Number . inputText|]
        R.cat ["0x", R.some rHexDigit] ~= [|spanned $ Number . inputText|]
 
-       OnAny ~=! [|tok Error|]
+       OnAny ~=! [|tok $ Error "unknown"|]
        OnEof ~=! [|tok Eof|]
    )
   where
     tok = spanned . const
+    withQuote quote _ = do
+      end <- getPos
+      res <- lexString quote ""
+      pure $ Spanned (Span start end) case res of
+        Left e -> Error e
+        Right s -> Str s
     spanned f i = do
       end <- getPos
       pure $! Spanned (Span start end) $! f i
@@ -199,4 +217,80 @@ tests :: TestTree
 tests =
   testGroup
     "Lua"
-    []
+    [ testCase "numbers" do
+        let ns = ["3", "3.0", "3.1416", "314.16e-2", "0.31416E1", "0xff", "0x56"]
+        check' (T.intercalate " " ns) (fmap Number ns ++ [Eof]),
+      testCase "names" do
+        check' "b yo" [Name "b", Name "yo", Eof],
+      testCase "strings" do
+        check' "\"hello\" 'world'" [Str "hello", Str "world", Eof],
+      testCase "keywords" do
+        let s =
+              "+ - * / % ^ # == ~= <= >= < > = ( ) { } [ ]\
+              \ ; : , . .. ... and break do else elseif end\
+              \ false for function if in local nil not or repeat\
+              \ return then true until while n"
+        check'
+          s
+          [ Plus,
+            Minus,
+            Star,
+            Slash,
+            Percent,
+            Caret,
+            Hash,
+            EqEq,
+            TildeEq,
+            LtEq,
+            GtEq,
+            Lt,
+            Gt,
+            Eq,
+            LParen,
+            RParen,
+            LBrace,
+            RBrace,
+            LBracket,
+            RBracket,
+            Semicolon,
+            Colon,
+            Comma,
+            Dot,
+            DotDot,
+            DotDotDot,
+            And,
+            Break,
+            Do,
+            Else,
+            ElseIf,
+            End,
+            TFalse,
+            For,
+            Function,
+            If,
+            In,
+            Local,
+            Nil,
+            Not,
+            Or,
+            Repeat,
+            Return,
+            Then,
+            TTrue,
+            Until,
+            While,
+            Name "n",
+            Eof
+          ]
+    ]
+  where
+    check' :: Text -> [Token] -> Assertion
+    check' = check ((fmap . fmap) value lexAll)
+
+    check :: (Show a, Eq a, HasCallStack) => Lex () a -> Text -> a -> Assertion
+    check lex text actual = do
+      let ((), ts) = lexText lex text ()
+      ts @?= actual
+
+golden :: Show a => String -> IO a -> TestTree
+golden = testGoldenInShow "LuaTest"

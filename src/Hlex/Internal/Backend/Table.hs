@@ -177,7 +177,7 @@ codegen config dfa = do
         -- people that lex bytestring should specifically provide the onInvalidUtf8
         Nothing -> [|error "invalid utf8"|]
         Just exp -> exp
-      allSingle = all (\case _ NE.:| as -> null as) dfa
+      allSingle = all (\ne@(_ NE.:| as) -> all (Maybe.isNothing . Rule.context) ne && null as) dfa
       checkPredicatesExp =
         if allSingle
           then emptyCheckPredicatesExp

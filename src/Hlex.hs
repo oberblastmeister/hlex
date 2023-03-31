@@ -14,6 +14,7 @@ import Hlex.Internal.Monad as X
     getPos,
     inputLength,
     inputText,
+    inputChar,
     isInputEnd,
     isInputStart,
     lexText,

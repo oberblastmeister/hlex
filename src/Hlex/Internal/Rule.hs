@@ -8,12 +8,14 @@ import Control.Monad.State.Strict qualified as State
 import Hlex.Internal.Regex
 import Language.Haskell.TH qualified as TH
 
-data Accept = Accept
-  { exp :: TH.ExpQ,
-    context :: Maybe TH.ExpQ
-  }
+type Accept = Accept' TH.ExpQ
 
-defRules :: Rules
+data Accept' a = Accept
+  { exp :: a,
+    context :: Maybe a
+  } deriving (Show, Eq)
+
+defRules :: Rules' a
 defRules =
   Rules
     { rulesList = [],
@@ -22,65 +24,69 @@ defRules =
       rulesInvalidUtf8 = Nothing
     }
 
-data Rules = Rules
-  { rulesList :: [Rule Accept],
-    rulesAny :: Maybe TH.ExpQ,
-    rulesEof :: Maybe TH.ExpQ,
-    rulesInvalidUtf8 :: Maybe TH.ExpQ
-  }
+type Rules = Rules' TH.ExpQ
 
-newtype RuleBuilder b = RuleBuilder
-  { runLexerBuilder :: State Rules b
+data Rules' a = Rules
+  { rulesList :: [Rule (Accept' a)],
+    rulesAny :: Maybe a,
+    rulesEof :: Maybe a,
+    rulesInvalidUtf8 :: Maybe a
+  } deriving (Show, Eq)
+
+type RuleBuilder = RuleBuilder' TH.ExpQ
+
+newtype RuleBuilder' a b = RuleBuilder
+  { runLexerBuilder :: State (Rules' a) b
   }
   deriving
-    (Functor, Applicative, Monad, MonadState Rules)
-    via (State Rules)
+    (Functor, Applicative, Monad, MonadState (Rules' a))
+    via (State (Rules' a))
 
 data Rule a = Rule
   { regex :: Regex,
     accept :: a
   }
-  deriving (Functor)
+  deriving (Show, Eq, Functor)
 
-modifyRules :: MonadState Rules m => ([Rule Accept] -> [Rule Accept]) -> m ()
+modifyRules :: MonadState (Rules' a) m => ([Rule (Accept' a)] -> [Rule (Accept' a)]) -> m ()
 modifyRules f = State.modify' \rules -> rules {rulesList = f $ rulesList rules}
 
-rule :: Regex -> TH.ExpQ -> RuleBuilder ()
+rule :: Regex -> a -> RuleBuilder' a ()
 rule regex exp = modifyRules (Rule {regex, accept = Accept {exp, context = Nothing}} :)
 
-ruleContext :: Regex -> (TH.ExpQ, TH.ExpQ) -> RuleBuilder ()
+ruleContext :: Regex -> (a, a) -> RuleBuilder' a ()
 ruleContext regex (exp, context) = modifyRules (Rule {regex, accept = Accept {exp, context = Just context}} :)
 
-ruleAny :: TH.ExpQ -> RuleBuilder ()
+ruleAny :: a -> RuleBuilder' a ()
 ruleAny exp = State.modify' \rules -> rules {rulesAny = Just exp}
 
-ruleEof :: TH.ExpQ -> RuleBuilder ()
+ruleEof :: a -> RuleBuilder' a ()
 ruleEof exp = State.modify' \rules -> rules {rulesEof = Just exp}
 
-ruleCatchAll :: TH.ExpQ -> RuleBuilder ()
+ruleCatchAll :: a -> RuleBuilder' a ()
 ruleCatchAll exp = ruleAny exp *> ruleEof exp
 
-ruleInvalidUtf8 :: TH.ExpQ -> RuleBuilder ()
+ruleInvalidUtf8 :: a -> RuleBuilder' a ()
 ruleInvalidUtf8 exp = State.modify' \rules -> rules {rulesInvalidUtf8 = Just exp}
 
-(~=) :: Regex -> TH.ExpQ -> RuleBuilder ()
+(~=) :: Regex -> a -> RuleBuilder' a ()
 (~=) = rule
 
-(~=?) :: Regex -> (TH.ExpQ, TH.ExpQ) -> RuleBuilder ()
+(~=?) :: Regex -> (a, a) -> RuleBuilder' a ()
 (~=?) = ruleContext
 
 data SpecialRule = CatchAll | OnAny | OnEof | OnInvalidUtf8
 
-ruleSpecial :: SpecialRule -> TH.ExpQ -> RuleBuilder ()
+ruleSpecial :: SpecialRule -> a -> RuleBuilder' a ()
 ruleSpecial CatchAll = ruleCatchAll
 ruleSpecial OnAny = ruleAny
 ruleSpecial OnEof = ruleEof
 ruleSpecial OnInvalidUtf8 = ruleInvalidUtf8
 
-(~=!) :: SpecialRule -> TH.ExpQ -> RuleBuilder ()
+(~=!) :: SpecialRule -> a -> RuleBuilder' a ()
 (~=!) = ruleSpecial
 
-evalRuleBuilder :: RuleBuilder () -> Rules
+evalRuleBuilder :: RuleBuilder' a () -> Rules' a
 evalRuleBuilder m = rules {rulesList = reverse $ rulesList rules}
   where
     rules = flip State.execState defRules . runLexerBuilder $ m

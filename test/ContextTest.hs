@@ -26,17 +26,19 @@ lexer n =
   where
     tok = const . pure
 
-lexAll = lexUntil (== 1)
+lexAll :: Int -> Lex () [Int]
+lexAll = lexUntil (== 1) . lexer
 
 tests :: TestTree
 tests =
   testGroup
     "ContextTest"
     [ golden "smoke" do
-        let ((), ts) = lexText (lexAll $ lexer 0) "abab" ()
-        let ((), ts') = lexText (lexAll $ lexer 1) "abab" ()
-        let ((), ts'') = lexText (lexAll $ lexer 2) "abzzab" ()
-        pure $ ts ++ ts' ++ ts''
+        let ((), ts) = lexText (lexAll 0) "abab" ()
+        let ((), ts') = lexText (lexAll 1) "abab" ()
+        let ((), ts'') = lexText (lexAll 2) "abzzab" ()
+        let ((), ts''') = lexText (lexAll 1234) "abab" ()
+        pure $ ts ++ ts' ++ ts'' ++ ts'''
     ]
 
 golden :: Show a => String -> IO a -> TestTree

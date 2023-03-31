@@ -9,7 +9,7 @@ where
 import Data.Bifunctor (first)
 import Data.Either qualified as Either
 import Data.Foldable (foldMap', foldl')
-import Data.Function ((&))
+import Data.Function (on, (&))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
@@ -47,10 +47,10 @@ import Hlex.Internal.Dfa qualified as Dfa
 --           end;
 --      end;
 -- end;
-minimize :: Dfa a -> Dfa a
+minimize :: Ord a => Dfa a -> Dfa a
 minimize = Dfa.normalize . minimize'
 
-minimize' :: Dfa a -> Dfa.Dfa' (HashMap Int) Int a
+minimize' :: Ord a => Dfa a -> Dfa.Dfa' (HashMap Int) Int a
 minimize' dfa = dfa'
   where
     dfa' =
@@ -72,7 +72,7 @@ minimize' dfa = dfa'
 
     equivalent = dfaEquivalentStates dfa
 
-dfaEquivalentStates :: Dfa a -> [Dfa.StateSet]
+dfaEquivalentStates :: Ord a => Dfa a -> [Dfa.StateSet]
 dfaEquivalentStates dfa = go p q
   where
     p = acceptingSets ++ [nonAcceptingSet]
@@ -83,18 +83,22 @@ dfaEquivalentStates dfa = go p q
 
     -- !_ = traceId $ "bigMap: " ++ show bigMap
 
-    -- we will make every accepting state distinct from each other
-    -- because it is not that useful to merge accepting states
-    acceptingSets = IntSet.singleton <$> acceptingAssoc
+    -- accepting states that have the same value will be in the same initial partition
+    acceptingSets =
+      fmap (IntSet.fromList . fmap fst) $
+        List.groupBy ((==) `on` snd) $
+          List.sortOn snd acceptingStates
 
-    ( acceptingAssoc,
-      fromList @IntSet -> nonAcceptingSet
+    nonAcceptingSet = IntSet.fromList nonAcceptingStates
+
+    ( acceptingStates,
+      nonAcceptingStates
       ) =
         dfa
           & Dfa.assocs
           & fmap
             ( \(i, Dfa.State {accept}) -> case accept of
-                Just _ -> Left i
+                Just accept -> Left (i, accept)
                 Nothing -> Right i
             )
           & Either.partitionEithers

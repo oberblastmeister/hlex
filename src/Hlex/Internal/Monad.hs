@@ -5,6 +5,11 @@
 {-# LANGUAGE UnliftedNewtypes #-}
 {-# LANGUAGE NoDuplicateRecordFields #-}
 {-# LANGUAGE NoOverloadedRecordDot #-}
+{-# OPTIONS_GHC -ddump-simpl
+-ddump-to-file
+-dsuppress-module-prefixes
+-dsuppress-coercions
+#-}
 
 module Hlex.Internal.Monad
   ( Input# (Input#, inputArr#, inputStart#, inputEnd#, ..),
@@ -31,6 +36,7 @@ module Hlex.Internal.Monad
     lexInput,
     lexText,
     lexByteString,
+    inputChar,
   )
 where
 
@@ -139,7 +145,6 @@ inputFromText (Data.Text.Internal.Text (Data.Text.Array.ByteArray arr) off len) 
       inputStart = off,
       inputEnd = off + len
     }
-{-# INLINE inputFromText #-}
 
 inputFromByteString :: ByteString -> Input Bytes
 inputFromByteString bytestring =
@@ -150,7 +155,6 @@ inputFromByteString bytestring =
     }
   where
     !(arr, off, endOff) = unpackByteString bytestring
-{-# INLINE inputFromByteString #-}
 
 inputText :: Input Utf8 -> Text
 inputText
@@ -164,7 +168,9 @@ inputText
       (Data.Text.Array.ByteArray inputArr#)
       inputStart
       (inputEnd - inputStart)
-{-# INLINE inputText #-}
+
+inputChar :: Input Utf8 -> Maybe Char
+inputChar = fmap fst . T.uncons . inputText
 
 spanInput :: Input Utf8 -> Input Utf8 -> Input Utf8
 spanInput
@@ -188,7 +194,6 @@ spanInput
         error $
           "combineInput: cannot combine inputs sliced from different strings: "
             <> show (inputText i1, inputText i2)
-{-# INLINE spanInput #-}
 
 newtype Pos# = Pos## (# Int#, Int# #)
 

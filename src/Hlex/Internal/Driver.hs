@@ -6,12 +6,15 @@ module Hlex.Internal.Driver
     Config (..),
     BackendKind,
     matches,
+    rulesToDfa,
   )
 where
 
 import Data.Function (on)
+import Data.List.NonEmpty (NonEmpty)
 import Hlex.Internal.Backend qualified as Backend
 import Hlex.Internal.Backend.Table qualified as Backend.Table
+import Hlex.Internal.Dfa (Dfa)
 import Hlex.Internal.Minimize qualified as Minimize
 import Hlex.Internal.NfaToDfa qualified as NfaToDfa
 import Hlex.Internal.Regex (Regex)
@@ -21,6 +24,23 @@ import Hlex.Internal.Rule (Rules)
 import Hlex.Internal.Rule qualified as Rule
 import Language.Haskell.TH qualified as TH
 import Prelude hiding (lex)
+
+rulesToDfa :: Rule.Rules' a -> Dfa (NonEmpty (Rule.Accept' a))
+rulesToDfa rules = do
+  let rulesWithError =
+        Rule.rulesList rules
+          ++ [ Rule.Rule
+                 { regex = Regex.dot',
+                   accept = Rule.Accept {exp, context = Nothing}
+                 }
+               | Just exp <- [Rule.rulesAny rules]
+             ]
+      rulesList' = (\(i, rule) -> Indexed i <$> rule) <$> zip [0 :: Int ..] rulesWithError
+      nfa = RegexToNfa.lexerToNfa rulesList'
+      dfa = NfaToDfa.nfaToDfa nfa
+      minDfa = Minimize.minimize dfa
+      minDfa' = (fmap . fmap) value minDfa
+  minDfa'
 
 hlex :: Rule.RuleBuilder () -> TH.ExpQ
 hlex builder =
