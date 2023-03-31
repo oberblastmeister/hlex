@@ -2,6 +2,7 @@ import ContextTest qualified
 import LexerTest qualified
 import MinimizeTest qualified
 import RegexTest qualified
+import SimpleTest qualified
 import Test.Tasty
 import Utf8Test qualified
 
@@ -10,7 +11,8 @@ main =
   defaultMain $
     testGroup
       "main"
-      [ Utf8Test.tests,
+      [ SimpleTest.tests,
+        Utf8Test.tests,
         MinimizeTest.tests,
         RegexTest.tests,
         LexerTest.tests,

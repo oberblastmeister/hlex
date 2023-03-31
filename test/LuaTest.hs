@@ -1,4 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -ddump-simpl
+-ddump-to-file
+-dsuppress-module-prefixes
+-dsuppress-coercions
+-dsuppress-idinfo #-}
 
 module LuaTest where
 
@@ -73,8 +78,11 @@ data Token
 
 data StringQuoteKind = SingleQuote | DoubleQuote
 
-lexer :: Pos -> Lex () (Spanned Token)
-lexer start =
+lexMain :: Lex () (Spanned Token)
+lexMain = lexMain' =<< getPos
+
+lexMain' :: Pos -> Lex () (Spanned Token)
+lexMain' start =
   $( ilex do
        rWhitespace ~= [|skip|]
 
@@ -143,7 +151,15 @@ lexer start =
     spanned f i = do
       end <- getPos
       pure $! Spanned (Span start end) $! f i
-    skip = const $ lexer =<< getPos
+    skip = const lexMain
+
+lexComment :: Lex () (Spanned Token)
+lexComment =
+  $( ilex do
+       "\n" ~= [|\_ -> lexMain|]
+       R.dot ~= [|\_ -> lexComment|]
+       CatchAll ~=! [|\_ -> lexMain|]
+   )
 
 lexString :: StringQuoteKind -> String -> Lex () (Either Text Text)
 lexString quoteKind = go
@@ -172,6 +188,7 @@ lexString quoteKind = go
            "\\\\" ~= [|addChar '\\'|]
            "\\\"" ~= [|addChar '"'|]
            "\\'" ~= [|addChar '\''|]
+           R.cat ["\\", R.dot] ~= [|\i -> pure $ Left $ "invalid escape sequence: " <> inputText i|]
            OnAny ~=! [|\i -> go $ fst (Maybe.fromJust (T.uncons (inputText i))) : cs|]
            OnEof ~=! [|\_ -> pure $ Left "unclosed string"|]
        )

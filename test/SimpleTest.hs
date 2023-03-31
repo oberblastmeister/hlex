@@ -9,8 +9,12 @@
 
 module SimpleTest where
 
+import Data.Text (Text)
 import Ilex
+import Ilex.Regex qualified as R
+import LexerUtils (lexUntil)
 import Test.Tasty
+import TestUtils (testGoldenInShow)
 
 testing :: Lex () Int
 testing =
@@ -24,5 +28,26 @@ testing =
   where
     tok = const . pure
 
+prefix :: Lex () [Text]
+prefix =
+  lexUntil (== "eof") $
+    $( ilex do
+         "a" ~= [|pure . inputText|]
+         R.cat [R.some "a", "b"] ~= [|pure . inputText|]
+         OnAny ~=! [|\_ -> pure "other"|]
+         OnEof ~=! [|\_ -> pure "eof"|]
+     )
+
 tests :: TestTree
-tests = testGroup "SimpleTest" []
+tests =
+  testGroup
+    "SimpleTest"
+    [ golden "prefix" do
+        let ((), ts) = lexText prefix "aaaaaaaaaaaaaaab" ()
+        let ((), ts') = lexText prefix "a" ()
+        let ((), ts'') = lexText prefix "aaa" ()
+        pure $ ts ++ ts' ++ ts''
+    ]
+
+golden :: Show a => String -> IO a -> TestTree
+golden = testGoldenInShow "SimpleTest"
