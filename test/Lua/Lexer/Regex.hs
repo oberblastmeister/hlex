@@ -1,4 +1,4 @@
-module LuaRegex where
+module Lua.Lexer.Regex where
 
 import Hlex.Regex qualified as R
 

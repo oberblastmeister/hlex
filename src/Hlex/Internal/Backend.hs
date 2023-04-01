@@ -69,9 +69,9 @@ acceptSwitchDec acceptMap name =
 withInpExp :: TH.ExpQ -> TH.ExpQ
 withInpExp exp = do
   [|
-    \(end :: Pos#) -> withInput $ \(input :: Input# u) ->
-      withPos $ \start -> do
-        setPos end
+    \(end :: Pos#) -> withInput# $ \(input :: Input# u) ->
+      withPos# $ \start -> do
+        setPos# end
         $exp
           ( liftInput# @u
               input
@@ -109,8 +109,8 @@ acceptSwitchExp acceptMap = do
             matches
         )
   [|
-    \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: Pos#) -> withPos $ \($(TH.varP startName)) ->
-      withInput $ \($(TH.varP inputName) :: Input# $(TH.varT uName)) -> do
-        setPos $(TH.varE endName)
+    \($(TH.varP acceptIdName) :: Int#) ($(TH.varP endName) :: Pos#) -> withPos# $ \($(TH.varP startName)) ->
+      withInput# $ \($(TH.varP inputName) :: Input# $(TH.varT uName)) -> do
+        setPos# $(TH.varE endName)
         $(caseExpr)
     |]

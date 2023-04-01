@@ -7,267 +7,16 @@
 
 module LuaTest where
 
-import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Data.Text qualified as T
-import Hlex
-import Hlex.Regex qualified as R
+import Hlex (lexText)
 import LexerUtils
-import LuaRegex
+import Lua.Lexer
+import Lua.Lexer.Monad
+import Lua.Token
 import Test.Tasty
 import Test.Tasty.HUnit
 import TestUtils (testGoldenInShow)
-
-data Token
-  = Error !Text
-  | Eof
-  | -- operators
-    Plus
-  | Minus
-  | Star
-  | Slash
-  | Percent
-  | Caret
-  | Hash
-  | EqEq
-  | TildeEq
-  | Lt
-  | LtEq
-  | Gt
-  | GtEq
-  | Semicolon
-  | Colon
-  | Comma
-  | Dot
-  | DotDot
-  | DotDotDot
-  | Eq
-  | -- delimiters
-    LParen
-  | RParen
-  | LBrace
-  | RBrace
-  | LBracket
-  | RBracket
-  | -- keywords
-    And
-  | Break
-  | Do
-  | Else
-  | ElseIf
-  | End
-  | TFalse
-  | For
-  | Function
-  | Goto
-  | If
-  | In
-  | Local
-  | Nil
-  | Not
-  | Or
-  | Repeat
-  | Return
-  | Then
-  | TTrue
-  | Until
-  | While
-  | -- literals
-    Str !Text
-  | Number !Text
-  | -- name
-    Name !Text
-  deriving (Show, Eq)
-
-data StringQuoteKind = SingleQuote | DoubleQuote
-
-type M = Lex ()
-
-lexAll :: M [Spanned Token]
-lexAll = lexUntil ((== Eof) . value) lexMain
-
-lexMain :: M (Spanned Token)
-lexMain = lexMain' =<< getPos
-
-lexMain' :: Pos -> M (Spanned Token)
-lexMain' start =
-  $( hlex do
-       rWhitespace ~= [|skip|]
-
-       "+" ~= [|tok Plus|]
-       "-" ~= [|tok Minus|]
-       "*" ~= [|tok Star|]
-       "/" ~= [|tok Slash|]
-       "%" ~= [|tok Percent|]
-       "^" ~= [|tok Caret|]
-       "#" ~= [|tok Hash|]
-       "==" ~= [|tok EqEq|]
-       "~=" ~= [|tok TildeEq|]
-       "<" ~= [|tok Lt|]
-       "<=" ~= [|tok LtEq|]
-       ">" ~= [|tok Gt|]
-       ">=" ~= [|tok GtEq|]
-       ";" ~= [|tok Semicolon|]
-       ":" ~= [|tok Colon|]
-       "," ~= [|tok Comma|]
-       "." ~= [|tok Dot|]
-       ".." ~= [|tok DotDot|]
-       "..." ~= [|tok DotDotDot|]
-       "=" ~= [|tok Eq|]
-
-       -- delimiters
-       "(" ~= [|tok LParen|]
-       ")" ~= [|tok RParen|]
-       "{" ~= [|tok LBrace|]
-       "}" ~= [|tok RBrace|]
-       "[" ~= [|tok LBracket|]
-       "]" ~= [|tok RBracket|]
-
-       -- keywords
-       "and" ~= [|tok And|]
-       "break" ~= [|tok Break|]
-       "do" ~= [|tok Do|]
-       "else" ~= [|tok Else|]
-       "elseif" ~= [|tok ElseIf|]
-       "end" ~= [|tok End|]
-       "false" ~= [|tok TFalse|]
-       "for" ~= [|tok For|]
-       "function" ~= [|tok Function|]
-       "goto" ~= [|tok Goto|]
-       "if" ~= [|tok If|]
-       "in" ~= [|tok In|]
-       "local" ~= [|tok Local|]
-       "nil" ~= [|tok Nil|]
-       "not" ~= [|tok Not|]
-       "or" ~= [|tok Or|]
-       "repeat" ~= [|tok Repeat|]
-       "return" ~= [|tok Return|]
-       "then" ~= [|tok Then|]
-       "true" ~= [|tok TTrue|]
-       "until" ~= [|tok Until|]
-       "while" ~= [|tok While|]
-
-       "\"" ~= [|withQuote DoubleQuote|]
-       "'" ~= [|withQuote SingleQuote|]
-
-       "--" ~= [|\_ -> lexEnterString (const lexMain) lexMain|]
-
-       -- names
-       R.cat [rVarStart, R.many rVarContinue] ~= [|spanned $ Name . inputText|]
-
-       -- numbers
-       rNumber ~= [|spanned $ Number . inputText|]
-       R.cat ["0x", R.some rHexDigit] ~= [|spanned $ Number . inputText|]
-
-       OnAny ~=! [|tok $ Error "unknown"|]
-       OnEof ~=! [|tok Eof|]
-   )
-  where
-    tok = spanned . const
-    lexEnterString :: (Utf8Input -> M (Spanned Token)) -> M (Spanned Token) -> M (Spanned Token)
-    lexEnterString f other =
-      $( hlex do
-           "[[" ~= [|\_ -> lexLongString 0 >>= done|]
-           "[=" ~= [|\_ -> lexLongStringBracketLeft 1 >>= done|]
-           CatchAll ~=! [|\_ -> other|]
-       )
-      where
-        done res = do
-          end <- getPos
-          case res of
-            Left e -> pure $ Spanned (Span start end) $ Error e
-            Right i -> f i
-    withQuote quote _ = do
-      end <- getPos
-      res <- lexString quote ""
-      pure $ Spanned (Span start end) case res of
-        Left e -> Error e
-        Right s -> Str s
-    spanned f i = do
-      end <- getPos
-      pure $! Spanned (Span start end) $! f i
-    skip = const lexMain
-
-type LongStringM = M (Either Text Utf8Input)
-
-lexString :: StringQuoteKind -> String -> M (Either Text Text)
-lexString quoteKind = go
-  where
-    go cs =
-      $( hlex do
-           "\""
-             ~= [|
-               \_ -> case quoteKind of
-                 DoubleQuote -> pure $ Right $ T.reverse $ T.pack cs
-                 SingleQuote -> go $ '"' : cs
-               |]
-           "'"
-             ~= [|
-               \_ -> case quoteKind of
-                 SingleQuote -> pure $ Right $ T.reverse $ T.pack cs
-                 DoubleQuote -> go $ '\'' : cs
-               |]
-           "\\a" ~= [|addChar '\a'|]
-           "\\b" ~= [|addChar '\b'|]
-           "\\f" ~= [|addChar '\f'|]
-           "\\n" ~= [|addChar '\n'|]
-           "\\r" ~= [|addChar '\r'|]
-           "\\t" ~= [|addChar '\t'|]
-           "\\v" ~= [|addChar '\v'|]
-           "\\\\" ~= [|addChar '\\'|]
-           "\\\"" ~= [|addChar '"'|]
-           "\\'" ~= [|addChar '\''|]
-           R.cat ["\\", R.dot] ~= [|\i -> pure $ Left $ "invalid escape sequence: " <> inputText i|]
-           OnAny ~=! [|\i -> go $ fst (Maybe.fromJust (T.uncons (inputText i))) : cs|]
-           OnEof ~=! [|\_ -> pure $ Left "unclosed string"|]
-       )
-      where
-        addChar c = const $ go (c : cs)
-
-lexComment :: M (Spanned Token)
-lexComment =
-  $( hlex do
-       R.dot ~= [|\_ -> lexComment|]
-       CatchAll ~=! [|\_ -> lexMain|]
-   )
-
-unclosedMsg, invalidCharacterMsg :: Text
-unclosedMsg = "unclosed bracketed string"
-invalidCharacterMsg = "invalid character in bracketed string"
-
-lexLongStringBracketLeft :: Int -> LongStringM
-lexLongStringBracketLeft !openingEqs =
-  $( hlex do
-       "=" ~= [|\_ -> lexLongStringBracketLeft $! openingEqs + 1|]
-       "[" ~= [|\_ -> lexLongString openingEqs|]
-       OnAny ~=! [|\_ -> pure $ Left invalidCharacterMsg|]
-       OnEof ~=! [|\_ -> pure $ Left unclosedMsg|]
-   )
-
-lexLongString :: Int -> LongStringM
-lexLongString !openingEqs =
-  $( hlex do
-       "]" ~= [|\_ -> lexLongStringBracketRight openingEqs|]
-       OnAny ~=! [|\_ -> lexLongString openingEqs|]
-       OnEof ~=! [|\_ -> pure $ Left unclosedMsg|]
-   )
-
-lexLongStringBracketRight :: Int -> LongStringM
-lexLongStringBracketRight openingEqs = go 0
-  where
-    go :: Int -> LongStringM
-    go !closingEqs =
-      $( hlex do
-           "=" ~= [|\_ -> go $! closingEqs + 1|]
-           "]" ~= [|goClose|]
-           OnAny ~=! [|\_ -> pure $ Left invalidCharacterMsg|]
-           OnEof ~=! [|\_ -> pure $ Left unclosedMsg|]
-       )
-      where
-        goClose i =
-          if openingEqs == closingEqs
-            then pure $ Right i
-            else pure $ Left $ T.pack $ "opening eqs /= closing eqs: " <> show openingEqs <> " /= " <> show closingEqs
 
 tests :: TestTree
 tests =
@@ -280,6 +29,12 @@ tests =
         check' "b yo" [Name "b", Name "yo", Eof],
       testCase "strings" do
         check' "\"hello\" 'world'" [Str "hello", Str "world", Eof],
+      testCase "long string" do
+        check'
+          "[[asdf]]   [=[\\n\\a\n\n\\r[]=] [==[er2323=3]==]"
+          [Str "asdf", Str "\\n\\a\n\n\\r[", Str "er2323=3", Eof],
+      testCase "long string error" do
+        check' "[=[]==] [==[]=]" [Error (InvalidEqs 1 2), Error (InvalidEqs 2 1), Eof],
       testCase "keywords" do
         let s =
               "+ - * / % ^ # == ~= <= >= < > = ( ) { } [ ]\
@@ -348,5 +103,5 @@ tests =
       let ((), ts) = lexText lex text ()
       ts @?= actual
 
-golden :: Show a => String -> IO a -> TestTree
+golden :: (Show a) => String -> IO a -> TestTree
 golden = testGoldenInShow "LuaTest"

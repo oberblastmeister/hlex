@@ -1,5 +1,7 @@
 packages:
     ./
 
+allow-newer: hedgehog:template-haskell
+
 tests: True
 test-show-details: direct

@@ -4,8 +4,8 @@ import Hlex
 import Hlex.Internal.Regex qualified as R
 
 data Span = Span
-  { start :: !Pos,
-    end :: !Pos
+  { start :: {-# UNPACK #-} !Pos,
+    end :: {-# UNPACK #-} !Pos
   }
   deriving (Show, Eq)
 

@@ -197,8 +197,8 @@ codegen config dfa = do
       checkPredicates = $checkPredicatesExp
 
       loop (stateId :: Int#) (pos :: Pos#) (lastMatch :: LastMatch#) =
-        withPos $ \start ->
-          withInput $ \(input@Input# {inputArr#, inputEnd#} :: Input# u) ->
+        withPos# $ \start ->
+          withInput# $ \(input@Input# {inputArr#, inputEnd#} :: Input# u) ->
             let !info = W32# (Exts.indexWord32OffAddr# infoTable stateId)
                 !acceptId = unI# (fromIntegral @Int32 @Int ((fromIntegral @Word32 @Int32 info) `Bits.unsafeShiftR` 1))
                 !newPos = pos {charOff# = charOff# pos +# unI# (fromIntegral @Word32 @Int (info Bits..&. 1))}
@@ -230,7 +230,7 @@ codegen config dfa = do
       |]
   body <-
     [|
-      withPos $ \pos ->
+      withPos# $ \pos ->
         loop $(TH.litE $ TH.intPrimL $ toInteger $ Dfa.start dfa) pos NoLastMatch#
       |]
   pure $ TH.LetE decs body

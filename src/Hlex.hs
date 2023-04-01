@@ -18,6 +18,7 @@ import Hlex.Internal.Monad as X
     isInputEnd,
     isInputStart,
     lexText,
+    setPos,
     spanInput,
   )
 import Hlex.Internal.Rule as X

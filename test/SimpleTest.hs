@@ -76,5 +76,5 @@ tests =
         pure $ ts ++ ts' ++ ts''
     ]
 
-golden :: Show a => String -> IO a -> TestTree
+golden :: (Show a) => String -> IO a -> TestTree
 golden = testGoldenInShow "SimpleTest"

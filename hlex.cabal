@@ -115,8 +115,12 @@ test-suite hlex-test
   hs-source-dirs: test
   main-is: Main.hs
   other-modules:
+    Lua.Lexer
+    Lua.Token
+    Lua.Lexer.String
+    Lua.Lexer.Regex
+    Lua.Lexer.Monad
     LuaTest
-    LuaRegex
     LexerUtils
     TestUtils
     MinimizeTest

@@ -34,6 +34,7 @@ module Hlex.Internal.Monad
     lexText,
     lexByteString,
     inputChar,
+    setPos,
   )
 where
 
@@ -48,12 +49,11 @@ import Data.Data (Data)
 import Data.Functor (($>))
 import Data.Primitive (ByteArray#)
 import Data.Primitive qualified as Primitive
-import Data.String (IsString)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Array qualified
 import Data.Text.Internal qualified
-import GHC.Exts (Int (..), Int#, (-#))
+import GHC.Exts (Int (..), Int#, (+#), (-#), (>#))
 import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
 import Hlex.Internal.ByteString (unpackByteString)
@@ -134,13 +134,25 @@ unliftInput# Input {inputArr = Primitive.ByteArray inputArr#, inputStart, inputE
     }
 {-# INLINE unliftInput# #-}
 
-getPos :: MonadLexer u m => m Pos
-getPos = withPos \Pos# {off#, charOff#} -> do
-  withInput \Input# {inputStart#} -> do
+getPos :: (MonadLexer u m) => m Pos
+getPos = withPos# \Pos# {off#, charOff#} -> do
+  withInput# \Input# {inputStart#} -> do
     let bytePos = I# (off# -# inputStart#)
     let charPos = I# charOff#
     pure Pos {bytePos, charPos}
-{-# INLINE getPos #-}
+{-# INLINEABLE getPos #-}
+
+-- | This will panic if the position is out of bounds.
+setPos :: (MonadLexer u m) => Pos -> m ()
+setPos Pos {bytePos, charPos} =
+  withInput# \Input# {inputStart#, inputEnd#} -> do
+    let !off# = inputStart# +# unI# bytePos
+    case off# ># inputEnd# of
+      1# -> error "setPos: out of bounds"
+      _ -> pure ()
+    let !charOff# = unI# charPos
+    setPos# Pos# {off#, charOff#}
+{-# INLINEABLE setPos #-}
 
 inputFromText :: Text -> Input Utf8
 inputFromText (Data.Text.Internal.Text (Data.Text.Array.ByteArray arr) off len) =
@@ -176,6 +188,7 @@ inputText
 inputChar :: Input Utf8 -> Maybe Char
 inputChar = fmap fst . T.uncons . inputText
 
+-- | This will panic if the two inputs are not from the same string.
 spanInput :: Input Utf8 -> Input Utf8 -> Input Utf8
 spanInput
   i1@Input
@@ -210,55 +223,55 @@ defPos# :: (# #) -> Pos#
 defPos# _ = Pos# 0# 0#
 {-# INLINE defPos# #-}
 
-class Monad m => MonadLexer u m | m -> u where
-  withInput :: (Input# u -> m a) -> m a
-  withPos :: (Pos# -> m a) -> m a
-  setPos :: Pos# -> m ()
+class (Monad m) => MonadLexer u m | m -> u where
+  withInput# :: (Input# u -> m a) -> m a
+  withPos# :: (Pos# -> m a) -> m a
+  setPos# :: Pos# -> m ()
 
-instance MonadLexer u m => MonadLexer u (Lazy.StateT s m) where
-  withInput f = Lazy.StateT \s -> withInput \le -> Lazy.runStateT (f le) s
-  withPos f = Lazy.StateT \s -> withPos \ls -> Lazy.runStateT (f ls) s
-  setPos ls = Lazy.StateT \s -> setPos ls $> ((), s)
-  {-# INLINE withInput #-}
-  {-# INLINE withPos #-}
-  {-# INLINE setPos #-}
+instance (MonadLexer u m) => MonadLexer u (Lazy.StateT s m) where
+  withInput# f = Lazy.StateT \s -> withInput# \le -> Lazy.runStateT (f le) s
+  withPos# f = Lazy.StateT \s -> withPos# \ls -> Lazy.runStateT (f ls) s
+  setPos# ls = Lazy.StateT \s -> setPos# ls $> ((), s)
+  {-# INLINE withInput# #-}
+  {-# INLINE withPos# #-}
+  {-# INLINE setPos# #-}
 
-instance MonadLexer u m => MonadLexer u (Strict.StateT s m) where
-  withInput f = Strict.StateT \s -> withInput \le -> Strict.runStateT (f le) s
-  withPos f = Strict.StateT \s -> withPos \ls -> Strict.runStateT (f ls) s
-  setPos ls = Strict.StateT \s -> setPos ls $> ((), s)
-  {-# INLINE withInput #-}
-  {-# INLINE withPos #-}
-  {-# INLINE setPos #-}
+instance (MonadLexer u m) => MonadLexer u (Strict.StateT s m) where
+  withInput# f = Strict.StateT \s -> withInput# \le -> Strict.runStateT (f le) s
+  withPos# f = Strict.StateT \s -> withPos# \ls -> Strict.runStateT (f ls) s
+  setPos# ls = Strict.StateT \s -> setPos# ls $> ((), s)
+  {-# INLINE withInput# #-}
+  {-# INLINE withPos# #-}
+  {-# INLINE setPos# #-}
 
-instance MonadLexer u m => MonadLexer u (Except.ExceptT e m) where
-  withInput f = Except.ExceptT $ withInput \le -> Except.runExceptT $ f le
-  withPos f = Except.ExceptT $ withPos \ls -> Except.runExceptT $ f ls
-  setPos ls = Except.ExceptT $ setPos ls $> Right ()
-  {-# INLINE withInput #-}
-  {-# INLINE withPos #-}
-  {-# INLINE setPos #-}
+instance (MonadLexer u m) => MonadLexer u (Except.ExceptT e m) where
+  withInput# f = Except.ExceptT $ withInput# \le -> Except.runExceptT $ f le
+  withPos# f = Except.ExceptT $ withPos# \ls -> Except.runExceptT $ f ls
+  setPos# ls = Except.ExceptT $ setPos# ls $> Right ()
+  {-# INLINE withInput# #-}
+  {-# INLINE withPos# #-}
+  {-# INLINE setPos# #-}
 
-instance MonadLexer u m => MonadLexer u (Reader.ReaderT r m) where
-  withInput f = Reader.ReaderT \r -> withInput \le -> Reader.runReaderT (f le) r
-  withPos f = Reader.ReaderT \r -> withPos \ls -> Reader.runReaderT (f ls) r
-  setPos ls = Reader.ReaderT \_ -> setPos ls
-  {-# INLINE withInput #-}
-  {-# INLINE withPos #-}
-  {-# INLINE setPos #-}
+instance (MonadLexer u m) => MonadLexer u (Reader.ReaderT r m) where
+  withInput# f = Reader.ReaderT \r -> withInput# \le -> Reader.runReaderT (f le) r
+  withPos# f = Reader.ReaderT \r -> withPos# \ls -> Reader.runReaderT (f ls) r
+  setPos# ls = Reader.ReaderT \_ -> setPos# ls
+  {-# INLINE withInput# #-}
+  {-# INLINE withPos# #-}
+  {-# INLINE setPos# #-}
 
-instance MonadLexer u m => MonadLexer u (Cont.ContT r m) where
-  withInput f = Cont.ContT \c -> withInput \le -> Cont.runContT (f le) c
-  withPos f = Cont.ContT \c -> withPos \ls -> Cont.runContT (f ls) c
-  setPos ls = Cont.ContT \c -> setPos ls *> c ()
-  {-# INLINE withInput #-}
-  {-# INLINE withPos #-}
-  {-# INLINE setPos #-}
+instance (MonadLexer u m) => MonadLexer u (Cont.ContT r m) where
+  withInput# f = Cont.ContT \c -> withInput# \le -> Cont.runContT (f le) c
+  withPos# f = Cont.ContT \c -> withPos# \ls -> Cont.runContT (f ls) c
+  setPos# ls = Cont.ContT \c -> setPos# ls *> c ()
+  {-# INLINE withInput# #-}
+  {-# INLINE withPos# #-}
+  {-# INLINE setPos# #-}
 
-getRemainingInput :: MonadLexer u m => m (Input u)
-getRemainingInput = withInput \i -> withPos \Pos# {off#} ->
-  pure $ liftInput# i {inputStart# = off#}
-{-# INLINE getRemainingInput #-}
+getRemainingInput :: (MonadLexer u m) => m (Input u)
+getRemainingInput = withInput# \i -> withPos# \Pos# {off#} ->
+  pure $! liftInput# i {inputStart# = off#}
+{-# INLINEABLE getRemainingInput #-}
 
 lexInput :: LexU u s a -> Input u -> s -> (s, a)
 lexInput (Lex f) input s =
@@ -307,9 +320,9 @@ instance MonadState s (LexU u s) where
   {-# INLINE put #-}
 
 instance MonadLexer u (LexU u s) where
-  withInput f = Lex \env ls s -> unLex (f env) env ls s
-  {-# INLINE withInput #-}
-  withPos f = Lex \env ls s -> unLex (f ls) env ls s
-  {-# INLINE withPos #-}
-  setPos ls = Lex \_env _ s -> (# ls, s, () #)
-  {-# INLINE setPos #-}
+  withInput# f = Lex \env ls s -> unLex (f env) env ls s
+  {-# INLINE withInput# #-}
+  withPos# f = Lex \env ls s -> unLex (f ls) env ls s
+  {-# INLINE withPos# #-}
+  setPos# ls = Lex \_env _ s -> (# ls, s, () #)
+  {-# INLINE setPos# #-}
