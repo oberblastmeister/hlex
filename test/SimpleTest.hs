@@ -61,7 +61,7 @@ singlePred = do
         CatchAll ~=! (2 :: Int)
   dfa <- pure $ shrinkAccepts <$> dfa
   let acceptMap = VB.fromList $ fmap Rule.exp $ concatMap NE.toList $ Dfa.accepts dfa
-  pPrint acceptMap
+  pure ()
 
 tests :: TestTree
 tests =

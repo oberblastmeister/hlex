@@ -81,13 +81,15 @@ data Token
 
 data StringQuoteKind = SingleQuote | DoubleQuote
 
-lexAll :: Lex () [Spanned Token]
+type M = Lex ()
+
+lexAll :: M [Spanned Token]
 lexAll = lexUntil ((== Eof) . value) lexMain
 
-lexMain :: Lex () (Spanned Token)
+lexMain :: M (Spanned Token)
 lexMain = lexMain' =<< getPos
 
-lexMain' :: Pos -> Lex () (Spanned Token)
+lexMain' :: Pos -> M (Spanned Token)
 lexMain' start =
   $( hlex do
        rWhitespace ~= [|skip|]
@@ -148,6 +150,8 @@ lexMain' start =
        "\"" ~= [|withQuote DoubleQuote|]
        "'" ~= [|withQuote SingleQuote|]
 
+       "--" ~= [|\_ -> lexEnterString (const lexMain) lexMain|]
+
        -- names
        R.cat [rVarStart, R.many rVarContinue] ~= [|spanned $ Name . inputText|]
 
@@ -160,6 +164,19 @@ lexMain' start =
    )
   where
     tok = spanned . const
+    lexEnterString :: (Utf8Input -> M (Spanned Token)) -> M (Spanned Token) -> M (Spanned Token)
+    lexEnterString f other =
+      $( hlex do
+           "[[" ~= [|\_ -> lexLongString 0 >>= done|]
+           "[=" ~= [|\_ -> lexLongStringBracketLeft 1 >>= done|]
+           CatchAll ~=! [|\_ -> other|]
+       )
+      where
+        done res = do
+          end <- getPos
+          case res of
+            Left e -> pure $ Spanned (Span start end) $ Error e
+            Right i -> f i
     withQuote quote _ = do
       end <- getPos
       res <- lexString quote ""
@@ -171,15 +188,9 @@ lexMain' start =
       pure $! Spanned (Span start end) $! f i
     skip = const lexMain
 
-lexComment :: Lex () (Spanned Token)
-lexComment =
-  $( hlex do
-       "\n" ~= [|\_ -> lexMain|]
-       R.dot ~= [|\_ -> lexComment|]
-       CatchAll ~=! [|\_ -> lexMain|]
-   )
+type LongStringM = M (Either Text Utf8Input)
 
-lexString :: StringQuoteKind -> String -> Lex () (Either Text Text)
+lexString :: StringQuoteKind -> String -> M (Either Text Text)
 lexString quoteKind = go
   where
     go cs =
@@ -212,6 +223,51 @@ lexString quoteKind = go
        )
       where
         addChar c = const $ go (c : cs)
+
+lexComment :: M (Spanned Token)
+lexComment =
+  $( hlex do
+       R.dot ~= [|\_ -> lexComment|]
+       CatchAll ~=! [|\_ -> lexMain|]
+   )
+
+unclosedMsg, invalidCharacterMsg :: Text
+unclosedMsg = "unclosed bracketed string"
+invalidCharacterMsg = "invalid character in bracketed string"
+
+lexLongStringBracketLeft :: Int -> LongStringM
+lexLongStringBracketLeft !openingEqs =
+  $( hlex do
+       "=" ~= [|\_ -> lexLongStringBracketLeft $! openingEqs + 1|]
+       "[" ~= [|\_ -> lexLongString openingEqs|]
+       OnAny ~=! [|\_ -> pure $ Left invalidCharacterMsg|]
+       OnEof ~=! [|\_ -> pure $ Left unclosedMsg|]
+   )
+
+lexLongString :: Int -> LongStringM
+lexLongString !openingEqs =
+  $( hlex do
+       "]" ~= [|\_ -> lexLongStringBracketRight openingEqs|]
+       OnAny ~=! [|\_ -> lexLongString openingEqs|]
+       OnEof ~=! [|\_ -> pure $ Left unclosedMsg|]
+   )
+
+lexLongStringBracketRight :: Int -> LongStringM
+lexLongStringBracketRight openingEqs = go 0
+  where
+    go :: Int -> LongStringM
+    go !closingEqs =
+      $( hlex do
+           "=" ~= [|\_ -> go $! closingEqs + 1|]
+           "]" ~= [|goClose|]
+           OnAny ~=! [|\_ -> pure $ Left invalidCharacterMsg|]
+           OnEof ~=! [|\_ -> pure $ Left unclosedMsg|]
+       )
+      where
+        goClose i =
+          if openingEqs == closingEqs
+            then pure $ Right i
+            else pure $ Left $ T.pack $ "opening eqs /= closing eqs: " <> show openingEqs <> " /= " <> show closingEqs
 
 tests :: TestTree
 tests =
@@ -287,7 +343,7 @@ tests =
     check' :: Text -> [Token] -> Assertion
     check' = check ((fmap . fmap) value lexAll)
 
-    check :: (Show a, Eq a, HasCallStack) => Lex () a -> Text -> a -> Assertion
+    check :: (Show a, Eq a, HasCallStack) => M a -> Text -> a -> Assertion
     check lex text actual = do
       let ((), ts) = lexText lex text ()
       ts @?= actual

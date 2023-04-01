@@ -8,8 +8,7 @@
 {-# OPTIONS_GHC -ddump-simpl
 -ddump-to-file
 -dsuppress-module-prefixes
--dsuppress-coercions
-#-}
+-dsuppress-coercions #-}
 
 module Hlex.Internal.Monad
   ( Input# (Input#, inputArr#, inputStart#, inputEnd#, ..),
@@ -25,8 +24,6 @@ module Hlex.Internal.Monad
     liftInput#,
     unliftInput#,
     getPos,
-    inputFromText,
-    inputFromByteString,
     inputText,
     spanInput,
     Pos# (Pos#, off#, charOff#, ..),
@@ -47,6 +44,7 @@ import Control.Monad.State (MonadState (..))
 import Control.Monad.State.Lazy qualified as Lazy
 import Control.Monad.State.Strict qualified as Strict
 import Data.ByteString (ByteString)
+import Data.Data (Data)
 import Data.Functor (($>))
 import Data.Primitive (ByteArray#)
 import Data.Primitive qualified as Primitive
@@ -72,7 +70,13 @@ data Pos = Pos
   { bytePos :: !Int,
     charPos :: !Int
   }
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Ord, Generic, Data)
+
+instance Semigroup Pos where
+  Pos b c <> Pos b' c' = Pos (b + b') (c + c')
+
+instance Monoid Pos where
+  mempty = Pos 0 0
 
 data Utf8Status = Utf8 | Bytes
 
@@ -86,27 +90,27 @@ data Input (us :: Utf8Status) = Input
 
 isInputStart :: Input us -> Bool
 isInputStart Input {inputStart} = inputStart == 0
-{-# INLINE isInputStart #-}
 
 isInputEnd :: Input us -> Bool
 isInputEnd Input {inputArr, inputEnd} = inputEnd == Primitive.sizeofByteArray inputArr
-{-# INLINE isInputEnd #-}
 
 inputLength :: Input us -> Int
 inputLength Input {inputStart, inputEnd} = inputEnd - inputStart
-{-# INLINE inputLength #-}
 
 instance Show (Input Utf8) where
   show = show . inputText
-
-instance IsString (Input Utf8) where
-  fromString = inputFromText . T.pack
 
 instance Eq (Input us) where
   i == i' = inputLength i == inputLength i' && compare i i' == EQ
 
 instance Ord (Input us) where
-  compare i i' = Primitive.compareByteArrays (inputArr i) (inputStart i) (inputArr i') (inputStart i') (min (inputLength i) (inputLength i'))
+  compare i i' =
+    Primitive.compareByteArrays
+      (inputArr i)
+      (inputStart i)
+      (inputArr i')
+      (inputStart i')
+      (min (inputLength i) (inputLength i'))
 
 type Utf8Input = Input Utf8
 
@@ -260,7 +264,6 @@ lexInput :: LexU u s a -> Input u -> s -> (s, a)
 lexInput (Lex f) input s =
   case f (unliftInput# input) (defPos# (# #)) s of
     (# _, s, a #) -> (s, a)
-{-# INLINE lexInput #-}
 
 lexText :: Lex s a -> Text -> s -> (s, a)
 lexText lex = lexInput lex . inputFromText
